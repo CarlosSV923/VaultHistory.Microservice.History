@@ -1,0 +1,19 @@
+export enum ErrorCodes {
+    DatabaseError = 'Error.DatabaseError',
+    NotFound = 'Error.NotFound',
+    ValidationError = 'Error.ValidationError',
+    NullValue = 'Error.NullValue',
+    AuthenticationError = 'Error.AuthenticationError',
+    SDKError = 'Error.SDKError',
+    None = 'Error.None',
+}
+
+export class ErrorEntity {
+    constructor(
+        public readonly code: ErrorCodes,
+        public readonly message: string,
+    ) {}
+
+    static readonly None = new ErrorEntity(ErrorCodes.None, 'No error');
+    static readonly NullValue = new ErrorEntity(ErrorCodes.NullValue, 'El valor no puede ser nulo');
+}
