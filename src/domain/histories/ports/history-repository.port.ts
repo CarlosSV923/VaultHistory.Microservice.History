@@ -1,7 +1,7 @@
 import { type ResultEntity } from '../../abstractions/result.entity';
 import { type HistoryEntity } from '../history.entity';
 
-type HistoryFilter = {
+export type HistoryFilter = {
     userId: string;
     date?: string;
     theme?: string;

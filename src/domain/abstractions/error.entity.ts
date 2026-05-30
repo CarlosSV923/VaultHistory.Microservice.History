@@ -16,4 +16,24 @@ export class ErrorEntity {
 
     static readonly None = new ErrorEntity(ErrorCodes.None, 'No error');
     static readonly NullValue = new ErrorEntity(ErrorCodes.NullValue, 'El valor no puede ser nulo');
+
+    static DatabaseError(message: string): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.DatabaseError, message);
+    }
+
+    static NotFound(message: string): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.NotFound, message);
+    }
+
+    static ValidationError(message: string): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.ValidationError, message);
+    }
+
+    static AuthenticationError(message: string): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AuthenticationError, message);
+    }
+
+    static SDKError(message: string): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.SDKError, message);
+    }
 }

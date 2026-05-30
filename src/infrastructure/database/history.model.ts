@@ -4,9 +4,6 @@ import { HydratedDocument } from 'mongoose';
 @Schema()
 export class History {
     @Prop({ required: true })
-    id!: string;
-
-    @Prop({ required: true })
     userId!: string;
 
     @Prop({ required: false })
