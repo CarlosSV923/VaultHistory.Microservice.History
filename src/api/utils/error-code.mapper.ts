@@ -17,6 +17,8 @@ export class ErrorCodeMapper {
                 return 500; // Internal Server Error
             case ErrorCodes.None:
                 return 200; // OK
+            case ErrorCodes.InternalServerError:
+                return 500; // Internal Server Error
             default:
                 return 500; // Internal Server Error for unknown error codes
         }

@@ -10,6 +10,8 @@ import {
     DeactivateHistoryByIdUseCase,
     GetHistoriesByFilterUseCase,
 } from '@application/use-cases';
+import { APP_FILTER } from '@nestjs/core';
+import { GlobalExceptionFilter } from '@api/filters/global-exception.filter';
 
 @Module({
     imports: [],
@@ -26,6 +28,10 @@ import {
         {
             provide: AIServicePortToken,
             useClass: GeminiAdapter,
+        },
+        {
+            provide: APP_FILTER,
+            useClass: GlobalExceptionFilter,
         },
     ],
 })

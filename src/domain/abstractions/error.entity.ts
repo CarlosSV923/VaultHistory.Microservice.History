@@ -6,6 +6,7 @@ export enum ErrorCodes {
     AuthenticationError = 'Error.AuthenticationError',
     SDKError = 'Error.SDKError',
     None = 'Error.None',
+    InternalServerError = 'Error.InternalServerError',
 }
 
 export class ErrorEntity {
@@ -16,6 +17,10 @@ export class ErrorEntity {
 
     static readonly None = new ErrorEntity(ErrorCodes.None, 'No error');
     static readonly NullValue = new ErrorEntity(ErrorCodes.NullValue, 'El valor no puede ser nulo');
+    static readonly InternalServerError = new ErrorEntity(
+        ErrorCodes.InternalServerError,
+        'Error interno del servidor',
+    );
 
     static DatabaseError(message: string): ErrorEntity {
         return new ErrorEntity(ErrorCodes.DatabaseError, message);
