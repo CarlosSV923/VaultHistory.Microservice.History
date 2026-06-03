@@ -12,9 +12,15 @@ import {
 } from '@application/use-cases';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from '@api/filters/global-exception.filter';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-    imports: [],
+    imports: [
+        ConfigModule.forRoot({
+            envFilePath: [`config/.env.${process.env.NODE_ENV}`],
+            isGlobal: true,
+        }),
+    ],
     controllers: [HistoryController],
     providers: [
         GenerateHistoryUseCase,
