@@ -13,6 +13,8 @@ import {
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from '@api/filters/global-exception.filter';
 import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { History, HistorySchema } from '@infrastructure/database/history.model';
 
 @Module({
     imports: [
@@ -20,6 +22,13 @@ import { ConfigModule } from '@nestjs/config';
             envFilePath: [`config/.env.${process.env.NODE_ENV}`],
             isGlobal: true,
         }),
+        MongooseModule.forRoot(process.env.MONGODB_URI!),
+        MongooseModule.forFeature([
+            {
+                name: History.name,
+                schema: HistorySchema,
+            },
+        ]),
     ],
     controllers: [HistoryController],
     providers: [

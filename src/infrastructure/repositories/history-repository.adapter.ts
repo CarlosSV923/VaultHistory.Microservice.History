@@ -6,14 +6,14 @@ import {
     GetHistoryFilter,
     HistoryRepositoryPort,
 } from '@domain/histories/ports/history-repository.port';
-import { History } from '../database/history.model';
+import { History, HistoryDocument } from '../database/history.model';
 import { Model } from 'mongoose';
 import { HistoryRepositoryMapper } from './history-repository.mapper';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 
 @Injectable()
 export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
-    constructor(@InjectModel(History.name) private readonly historyModel: Model<History>) {}
+    constructor(@InjectModel(History.name) private readonly historyModel: Model<HistoryDocument>) {}
 
     private readonly logger = new Logger(HistoryRepositoryAdapter.name);
 
