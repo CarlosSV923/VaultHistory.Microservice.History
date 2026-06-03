@@ -1,13 +1,14 @@
 import { type ResultEntity } from '../../abstractions/result.entity';
 
-type contentData = {
+export interface GenerateContentParams {
+    userId: string;
     date?: string;
     theme?: string;
     character?: string;
-};
+}
 
 export interface AIServicePort {
-    generateContent(data: contentData): Promise<ResultEntity<string>>;
+    generateContent(data: GenerateContentParams): Promise<ResultEntity<string>>;
 }
 
 export const AIServicePortToken = Symbol('AIServicePort');

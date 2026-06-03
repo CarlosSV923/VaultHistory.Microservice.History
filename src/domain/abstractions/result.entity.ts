@@ -1,18 +1,18 @@
-import { type ErrorEntity } from './error.entity';
+import { ErrorEntity } from './error.entity';
 
 export class ResultEntity<T = void> {
     readonly isSuccess: boolean;
-    readonly error: ErrorEntity | null;
-    private readonly value: T | null | undefined;
+    readonly error: ErrorEntity;
+    private readonly value?: T | null;
 
-    private constructor(isSuccess: boolean, error: ErrorEntity | null, value?: T | null) {
+    private constructor(isSuccess: boolean, error?: ErrorEntity | null, value?: T | null) {
         this.isSuccess = isSuccess;
-        this.error = error;
+        this.error = error ?? ErrorEntity.None;
         this.value = value;
     }
 
     get Value(): T {
-        if (!this.isSuccess || this.value === null || this.value === undefined) {
+        if (!this.isSuccess || !this.value) {
             throw new Error('No value present');
         }
         return this.value;

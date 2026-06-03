@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ResultEntity } from 'src/domain/abstractions/result.entity';
-import { HistoryEntity } from 'src/domain/histories/history.entity';
+import { ResultEntity } from '@domain/abstractions/result.entity';
+import { HistoryEntity } from '@domain/histories/history.entity';
 import {
-    HistoryFilter,
+    GetHistoryFilter,
     HistoryRepositoryPort,
-} from 'src/domain/histories/ports/history-repository.port';
+} from '@domain/histories/ports/history-repository.port';
 import { History } from '../database/history.model';
 import { Model } from 'mongoose';
 import { HistoryRepositoryMapping } from './history-repository.mapping';
-import { ErrorEntity } from 'src/domain/abstractions/error.entity';
+import { ErrorEntity } from '@domain/abstractions/error.entity';
 
 @Injectable()
 export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
@@ -39,7 +39,7 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
         }
     }
 
-    async getHistoriesByFilter(filter: HistoryFilter): Promise<ResultEntity<HistoryEntity[]>> {
+    async getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>> {
         try {
             const histories = await this.historyModel
                 .find({ ...filter, isActive: true })

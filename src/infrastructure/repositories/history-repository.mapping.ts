@@ -1,4 +1,4 @@
-import { HistoryEntity } from 'src/domain/histories/history.entity';
+import { HistoryEntity } from '@domain/histories/history.entity';
 import { type Types } from 'mongoose';
 import { type History } from '../database/history.model';
 
