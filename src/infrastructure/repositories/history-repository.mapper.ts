@@ -2,7 +2,7 @@ import { HistoryEntity } from '@domain/histories/history.entity';
 import { type Types } from 'mongoose';
 import { type History } from '../database/history.model';
 
-export class HistoryRepositoryMapping {
+export class HistoryRepositoryMapper {
     static toEntity(
         historyModel: History & {
             _id: Types.ObjectId;

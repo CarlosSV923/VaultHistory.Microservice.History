@@ -8,7 +8,7 @@ import {
 } from '@domain/histories/ports/history-repository.port';
 import { History } from '../database/history.model';
 import { Model } from 'mongoose';
-import { HistoryRepositoryMapping } from './history-repository.mapping';
+import { HistoryRepositoryMapper } from './history-repository.mapper';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 
 @Injectable()
@@ -26,7 +26,7 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
 
     async saveHistory(entity: HistoryEntity): Promise<ResultEntity<void>> {
         try {
-            const history = new this.historyModel(HistoryRepositoryMapping.toModel(entity));
+            const history = new this.historyModel(HistoryRepositoryMapper.toModel(entity));
 
             await history.save();
             this.logger.log('History saved successfully');
@@ -46,7 +46,7 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
                 .lean()
                 .exec();
             const historyEntities = histories.map((history) =>
-                HistoryRepositoryMapping.toEntity(history),
+                HistoryRepositoryMapper.toEntity(history),
             );
             this.logger.log(`Retrieved ${historyEntities.length} histories successfully`);
             return ResultEntity.success(historyEntities);
