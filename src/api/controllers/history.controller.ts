@@ -9,7 +9,7 @@ import {
 import { GenerateHistoryDTO, GetHistoriesByFilterDTO } from '../dtos';
 import { ErrorCodeMapper } from '@api/utils/error-code.mapper';
 
-@Controller('history')
+@Controller({ path: 'history', version: '1' })
 export class HistoryController {
     constructor(
         private readonly generateHistoryUseCase: GenerateHistoryUseCase,
