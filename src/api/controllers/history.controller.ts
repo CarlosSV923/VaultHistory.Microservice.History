@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res, Patch, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res, Patch, Param, UseGuards } from '@nestjs/common';
 import express from 'express';
 import {
     GenerateHistoryUseCase,
@@ -22,6 +22,7 @@ import {
     ApiOperation,
 } from '@nestjs/swagger';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
+import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
 
 @Controller({ path: 'history', version: '1' })
 export class HistoryController {
@@ -32,6 +33,7 @@ export class HistoryController {
         private readonly deactivateHistoriesByUserIdUseCase: DeactivateHistoriesByUserIdUseCase,
     ) {}
 
+    @UseGuards(JwtAuthGuard)
     @Post('generate')
     @ApiOperation({ summary: 'Generate a new history based on provided criteria' })
     @ApiCreatedResponse({
@@ -64,6 +66,7 @@ export class HistoryController {
         response.status(201).json({ history: result.Value });
     }
 
+    @UseGuards(JwtAuthGuard)
     @Get('list')
     @ApiOperation({ summary: 'Get histories based on provided filters' })
     @ApiOkResponse({
@@ -101,6 +104,7 @@ export class HistoryController {
         });
     }
 
+    @UseGuards(JwtAuthGuard)
     @Patch(':id')
     @ApiOperation({ summary: 'Deactivate a history by its ID' })
     @ApiOkResponse({
@@ -130,6 +134,7 @@ export class HistoryController {
         response.status(200).json({ message: 'History deactivated successfully' });
     }
 
+    @UseGuards(JwtAuthGuard)
     @Patch('deactivate-by-user')
     @ApiOperation({ summary: 'Deactivate histories by user ID' })
     @ApiOkResponse({

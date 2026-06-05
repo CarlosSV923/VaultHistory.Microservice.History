@@ -22,6 +22,11 @@ export class ErrorEntity {
         'Error interno del servidor',
     );
 
+    static readonly AuthenticationError = new ErrorEntity(
+        ErrorCodes.AuthenticationError,
+        'Error de autenticación',
+    );
+
     static DatabaseError(message: string): ErrorEntity {
         return new ErrorEntity(ErrorCodes.DatabaseError, message);
     }
@@ -32,10 +37,6 @@ export class ErrorEntity {
 
     static ValidationError(message: string): ErrorEntity {
         return new ErrorEntity(ErrorCodes.ValidationError, message);
-    }
-
-    static AuthenticationError(message: string): ErrorEntity {
-        return new ErrorEntity(ErrorCodes.AuthenticationError, message);
     }
 
     static SDKError(message: string): ErrorEntity {

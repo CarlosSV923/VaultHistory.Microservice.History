@@ -1,5 +1,11 @@
 import { ErrorEntity } from '@domain/abstractions/error.entity';
-import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
+import {
+    ArgumentsHost,
+    Catch,
+    ExceptionFilter,
+    Logger,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
@@ -9,6 +15,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
+
+        if (exception instanceof UnauthorizedException) {
+            response.status(401).json({ ...ErrorEntity.AuthenticationError });
+            return;
+        }
 
         this.logger.error(
             'Unhandled exception caught' +
