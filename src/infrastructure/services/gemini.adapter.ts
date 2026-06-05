@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ResultEntity } from '@domain/abstractions/result.entity';
-import { AIServicePort, GenerateContentParams } from 'src/domain/histories/ports/ai-service.port';
+import { AIServicePort, GenerateContentParams } from '@domain/histories/ports/ai-service.port';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import { ErrorEntity } from 'src/domain/abstractions/error.entity';
+import { ErrorEntity } from '@domain/abstractions/error.entity';
 
 @Injectable()
 export class GeminiAdapter implements AIServicePort {
