@@ -1,5 +1,5 @@
 // src/api/auth/jwt-auth.guard.ts
-import { AuthenticatedUser } from '@api/context/authenticated-user';
+import { AuthenticatedUser } from '@api/auth/authenticated-user';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 

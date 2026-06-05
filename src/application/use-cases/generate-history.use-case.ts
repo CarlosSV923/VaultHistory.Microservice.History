@@ -21,14 +21,13 @@ export class GenerateHistoryUseCase {
             return ResultEntity.failure(contentResult.error);
         }
 
-        const newHistory = new HistoryEntity(
-            null,
-            params.userId,
-            contentResult.Value,
-            params.date,
-            params.theme,
-            params.character,
-        );
+        const newHistory = HistoryEntity.create({
+            userId: params.userId,
+            content: contentResult.Value,
+            date: params.date,
+            theme: params.theme,
+            character: params.character,
+        });
 
         const saveResult = await this.historyRepositoryPort.saveHistory(newHistory);
 

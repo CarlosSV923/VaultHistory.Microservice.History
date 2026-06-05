@@ -25,6 +25,15 @@ import { GeminiAdapter } from './services/gemini.adapter';
             useClass: GeminiAdapter,
         },
     ],
-    exports: [HistoryRepositoryPortToken, AIServicePortToken],
+    exports: [
+        {
+            provide: HistoryRepositoryPortToken,
+            useClass: HistoryRepositoryAdapter,
+        },
+        {
+            provide: AIServicePortToken,
+            useClass: GeminiAdapter,
+        },
+    ],
 })
 export class InfrastructureModule {}

@@ -8,16 +8,16 @@ export class HistoryRepositoryMapper {
             _id: Types.ObjectId;
         },
     ): HistoryEntity {
-        return new HistoryEntity(
-            historyModel._id.toHexString(),
-            historyModel.userId,
-            historyModel.content,
-            historyModel.date,
-            historyModel.theme,
-            historyModel.character,
-            historyModel.isActive,
-            historyModel.generateAt,
-        );
+        return HistoryEntity.restore({
+            id: historyModel._id.toHexString(),
+            userId: historyModel.userId,
+            content: historyModel.content,
+            date: historyModel.date,
+            theme: historyModel.theme,
+            character: historyModel.character,
+            isActive: historyModel.isActive,
+            generateAt: historyModel.generateAt,
+        });
     }
 
     static toModel(

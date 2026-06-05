@@ -28,11 +28,13 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
         try {
             const history = new this.historyModel(HistoryRepositoryMapper.toModel(entity));
 
-            await history.save();
-            this.logger.log('History saved successfully');
+            const result = await history.save();
+            this.logger.log(
+                `User ${entity.userId} - History saved successfully - Id: ${result._id.toHexString()}`,
+            );
             return ResultEntity.success();
         } catch (error) {
-            const baseMessage = 'Failed to save history';
+            const baseMessage = `User ${entity.userId} - Failed to save history`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
@@ -51,7 +53,7 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
             this.logger.log(`Retrieved ${historyEntities.length} histories successfully`);
             return ResultEntity.success(historyEntities);
         } catch (error) {
-            const baseMessage = 'Failed to retrieve histories';
+            const baseMessage = `User ${filter.userId} - Failed to retrieve histories`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
@@ -65,35 +67,35 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
                 .exec();
 
             this.logger.log(
-                `Deactivated ${update.modifiedCount} histories for userId: ${userId} successfully`,
+                `User ${userId} - Deactivated ${update.modifiedCount} histories successfully`,
             );
 
             return ResultEntity.success();
         } catch (error) {
-            const baseMessage = `Failed to deactivate histories for userId: ${userId}`;
+            const baseMessage = `User ${userId} - Failed to deactivate histories`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
         }
     }
 
-    async deactivateById(id: string): Promise<ResultEntity<void>> {
+    async deactivateById(id: string, userId: string): Promise<ResultEntity<void>> {
         try {
             const update = await this.historyModel
-                .findOneAndUpdate({ _id: id, isActive: true }, { isActive: false })
+                .findOneAndUpdate({ _id: id, userId, isActive: true }, { isActive: false })
                 .exec();
 
             if (!update) {
-                this.logger.warn(`History with id: ${id} not found`);
+                this.logger.warn(`User ${userId} - History with id: ${id} not found`);
                 return ResultEntity.failure(
-                    ErrorEntity.NotFound(`History with id: ${id} not found`),
+                    ErrorEntity.NotFound(`User ${userId} - History with id: ${id} not found`),
                 );
             }
 
-            this.logger.log(`Deactivated history with id: ${id} successfully`);
+            this.logger.log(`User ${userId} - Deactivated history with id: ${id} successfully`);
             return ResultEntity.success();
         } catch (error) {
-            const baseMessage = `Failed to deactivate history with id: ${id}`;
+            const baseMessage = `User ${userId} - Failed to deactivate history with id: ${id}`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));

@@ -50,16 +50,21 @@ export class GeminiAdapter implements AIServicePort {
             });
             if (!response?.text) {
                 this.logger.warn(
-                    'Received empty response from Gemini - response: ' + JSON.stringify(response),
+                    `User ${data.userId} - Received empty response from Gemini - response: ` +
+                        JSON.stringify(response),
                 );
                 return ResultEntity.failure(
                     ErrorEntity.SDKError('Received empty response from Gemini'),
                 );
             }
+            this.logger.log(
+                `User ${data.userId} - Content generated successfully with Gemini - response: ` +
+                    JSON.stringify(response),
+            );
             return ResultEntity.success(response.text);
         } catch (error) {
             this.logger.error(
-                'Error generating content with Gemini - Message: ' +
+                `User ${data.userId} - Error generating content with Gemini - Message: ` +
                     (error instanceof Error ? error.message : 'Unknown error'),
                 error instanceof Error ? error.stack : null,
             );

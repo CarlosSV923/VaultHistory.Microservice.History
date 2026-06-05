@@ -10,7 +10,7 @@ export class DeactivateHistoryByIdUseCase {
         private readonly historyRepositoryPort: HistoryRepositoryPort,
     ) {}
 
-    async execute(id: string): Promise<ResultEntity<void>> {
-        return this.historyRepositoryPort.deactivateById(id);
+    async execute(id: string, userId: string): Promise<ResultEntity<void>> {
+        return this.historyRepositoryPort.deactivateById(id, userId);
     }
 }

@@ -20,9 +20,12 @@ import {
     ApiInternalServerErrorResponse,
     ApiOkResponse,
     ApiOperation,
+    ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
+import type { AuthenticatedUser } from '@api/auth/authenticated-user';
+import { CurrentUser } from '@api/auth/current-user.decorator';
 
 @Controller({ path: 'history', version: '1' })
 export class HistoryController {
@@ -48,12 +51,17 @@ export class HistoryController {
         description: 'Unhandled server error',
         type: ErrorEntity,
     })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - invalid or missing JWT',
+        type: ErrorEntity,
+    })
     async generateHistory(
         @Body() body: GenerateHistoryRequestDTO,
+        @CurrentUser() user: AuthenticatedUser,
         @Res() response: express.Response,
     ) {
         const result = await this.generateHistoryUseCase.execute({
-            userId: 'some-user-id', // This should come from authenticated user context
+            userId: user.userId,
             ...body,
         });
 
@@ -77,12 +85,17 @@ export class HistoryController {
         description: 'Unhandled server error',
         type: ErrorEntity,
     })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - invalid or missing JWT',
+        type: ErrorEntity,
+    })
     async getHistoriesByFilter(
         @Query() filter: GetHistoriesByFilterRequestDTO,
+        @CurrentUser() user: AuthenticatedUser,
         @Res() response: express.Response,
     ) {
         const result = await this.getHistoriesByFilterUseCase.execute({
-            userId: 'some-user-id', // This should come from authenticated user context
+            userId: user.userId,
             ...filter,
         });
 
@@ -115,15 +128,20 @@ export class HistoryController {
         description: 'Validation or domain error',
         type: ErrorEntity,
     })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - invalid or missing JWT',
+        type: ErrorEntity,
+    })
     @ApiInternalServerErrorResponse({
         description: 'Unhandled server error',
         type: ErrorEntity,
     })
     async deactivateHistoryById(
         @Param() params: DeactivateHistoryByIdRequestDTO,
+        @CurrentUser() user: AuthenticatedUser,
         @Res() response: express.Response,
     ) {
-        const result = await this.deactivateHistoryByIdUseCase.execute(params.id);
+        const result = await this.deactivateHistoryByIdUseCase.execute(params.id, user.userId);
 
         if (result.isFailure) {
             const error = result.error;
@@ -141,12 +159,19 @@ export class HistoryController {
         description: 'Histories deactivated successfully',
         type: ErrorEntity,
     })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - invalid or missing JWT',
+        type: ErrorEntity,
+    })
     @ApiInternalServerErrorResponse({
         description: 'Unhandled server error',
         type: ErrorEntity,
     })
-    async deactivateHistoriesByUserId(@Res() response: express.Response) {
-        const userId = 'some-user-id'; // This should come from authenticated user context
+    async deactivateHistoriesByUserId(
+        @CurrentUser() user: AuthenticatedUser,
+        @Res() response: express.Response,
+    ) {
+        const userId = user.userId;
         const result = await this.deactivateHistoriesByUserIdUseCase.execute(userId);
 
         if (result.isFailure) {

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { HistoryController } from '@api/controllers/history.controller';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from '@api/filters/global-exception.filter';
 import { ConfigModule } from '@nestjs/config';
