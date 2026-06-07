@@ -389,10 +389,10 @@ El proyecto declara versiones recomendadas de runtime en `package.json` mediante
 
 ```json
 {
-  "volta": {
-    "node": "24.16.0",
-    "npm": "11.4.0"
-  }
+    "volta": {
+        "node": "24.16.0",
+        "npm": "11.4.0"
+    }
 }
 ```
 
