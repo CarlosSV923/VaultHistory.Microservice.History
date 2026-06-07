@@ -77,6 +77,10 @@ describe('GeminiAdapter', () => {
             adapter = module.get<GeminiAdapter>(GeminiAdapter);
         });
 
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
         it('should generate content with all parameters', async () => {
             // Arrange
             const params: GenerateContentParams = {
@@ -245,6 +249,7 @@ describe('GeminiAdapter', () => {
 
         it('should return failure when Gemini API throws an error', async () => {
             // Arrange
+            jest.useFakeTimers();
             const params: GenerateContentParams = {
                 userId: 'user123',
             };
@@ -253,16 +258,20 @@ describe('GeminiAdapter', () => {
             mockAIGenerateContent.mockRejectedValue(error);
 
             // Act
-            const result = await adapter.generateContent(params);
+            const resultPromise = adapter.generateContent(params);
+            await jest.runAllTimersAsync();
+            const result = await resultPromise;
 
             // Assert
             expect(result.isSuccess).toBe(false);
             expect(result.isFailure).toBe(true);
             expect(result.error.code).toBe(ErrorCodes.SDKError);
+            expect(mockAIGenerateContent).toHaveBeenCalledTimes(4);
         });
 
         it('should handle non-Error objects thrown by API', async () => {
             // Arrange
+            jest.useFakeTimers();
             const params: GenerateContentParams = {
                 userId: 'user123',
             };
@@ -270,12 +279,63 @@ describe('GeminiAdapter', () => {
             mockAIGenerateContent.mockRejectedValue('Unknown error');
 
             // Act
-            const result = await adapter.generateContent(params);
+            const resultPromise = adapter.generateContent(params);
+            await jest.runAllTimersAsync();
+            const result = await resultPromise;
 
             // Assert
             expect(result.isSuccess).toBe(false);
             expect(result.isFailure).toBe(true);
             expect(result.error.code).toBe(ErrorCodes.SDKError);
+            expect(mockAIGenerateContent).toHaveBeenCalledTimes(4);
+        });
+
+        it('should retry failed Gemini API calls and return success when a retry succeeds', async () => {
+            // Arrange
+            jest.useFakeTimers();
+            const params: GenerateContentParams = {
+                userId: 'user123',
+            };
+
+            const expectedResponse = {
+                text: 'Generated content after retry',
+            };
+
+            mockAIGenerateContent
+                .mockRejectedValueOnce(new Error('Rate limit exceeded'))
+                .mockRejectedValueOnce('Community overload')
+                .mockResolvedValueOnce(expectedResponse);
+
+            // Act
+            const resultPromise = adapter.generateContent(params);
+            await jest.runAllTimersAsync();
+            const result = await resultPromise;
+
+            // Assert
+            expect(result.isSuccess).toBe(true);
+            expect(result.Value).toBe(expectedResponse.text);
+            expect(mockAIGenerateContent).toHaveBeenCalledTimes(3);
+        });
+
+        it('should retry three times before returning failure when Gemini API keeps failing', async () => {
+            // Arrange
+            jest.useFakeTimers();
+            const params: GenerateContentParams = {
+                userId: 'user123',
+            };
+
+            mockAIGenerateContent.mockRejectedValue(new Error('Gemini unavailable'));
+
+            // Act
+            const resultPromise = adapter.generateContent(params);
+            await jest.runAllTimersAsync();
+            const result = await resultPromise;
+
+            // Assert
+            expect(result.isSuccess).toBe(false);
+            expect(result.isFailure).toBe(true);
+            expect(result.error.code).toBe(ErrorCodes.SDKError);
+            expect(mockAIGenerateContent).toHaveBeenCalledTimes(4);
         });
     });
 });
