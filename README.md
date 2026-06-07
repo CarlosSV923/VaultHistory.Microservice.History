@@ -1,98 +1,420 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# VaultHistory.Microservice.History
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Microservicio desarrollado con NestJS para el modulo de historias dentro del sistema VaultHistory.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Este repositorio documenta principalmente aspectos tecnicos del proyecto: arquitectura, ejecucion local, Docker, MongoDB, Mongoose, autenticacion JWT, integracion con Gemini y flujo de pruebas.
 
-## Description
+## Stack Tecnico
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Node.js 24
+- TypeScript
+- NestJS
+- MongoDB
+- Mongoose
+- Docker / Docker Compose
+- Jest
+- mongodb-memory-server
+- Swagger / OpenAPI
+- Google Gemini API
 
-## Project setup
+## Arquitectura
 
-```bash
-$ pnpm install
+El proyecto esta organizado por capas, separando dominio, casos de uso, infraestructura y API.
+
+```txt
+src/
+  api/
+  application/
+  domain/
+  infrastructure/
+  app.module.ts
+  main.ts
+
+test/
+  integration/
+  src/
 ```
 
-## Compile and run the project
+### Domain
 
-```bash
-# development
-$ pnpm run start
+Contiene el modelo de dominio y las reglas principales del sistema.
 
-# watch mode
-$ pnpm run start:dev
+Incluye:
 
-# production mode
-$ pnpm run start:prod
+- Entities
+- Abstracciones compartidas del dominio
+- Result y Error entities
+- Interfaces/puertos de repositorios
+- Interfaces/puertos para servicios externos
+
+Esta capa no depende de infraestructura, frameworks externos ni detalles de persistencia.
+
+### Application
+
+Contiene los casos de uso y la logica de aplicacion.
+
+Incluye:
+
+- Use Cases
+- Coordinacion entre dominio, repositorios y servicios externos
+- Modulo de aplicacion
+
+Casos de uso principales:
+
+- Generar una historia con IA.
+- Consultar historias activas por filtros.
+- Desactivar una historia por identificador.
+- Desactivar todas las historias de un usuario.
+
+Esta capa coordina el flujo de trabajo entre el dominio y las dependencias externas, sin conocer detalles concretos de infraestructura.
+
+### Infrastructure
+
+Contiene implementaciones concretas para persistencia y servicios externos.
+
+Incluye:
+
+- Modelo Mongoose `History`
+- Adaptador de repositorio MongoDB
+- Mapper entre modelo persistente y entidad de dominio
+- Adaptador de Gemini
+- Configuracion de proveedores de infraestructura
+
+### Api
+
+Expone los endpoints HTTP del microservicio.
+
+Incluye:
+
+- Controller de historias
+- DTOs de request/response
+- Guard de autenticacion JWT
+- Strategy JWT
+- Decorador de usuario autenticado
+- Filtro global de excepciones
+- Swagger / OpenAPI
+
+Endpoints principales:
+
+```txt
+POST  /api/v1/history/generate
+GET   /api/v1/history/list
+PATCH /api/v1/history/deactivate-by-id/:id
+PATCH /api/v1/history/deactivate-by-user
 ```
 
-## Run tests
+Todos los endpoints de historias requieren un JWT valido mediante `Authorization: Bearer <token>`.
 
-```bash
-# unit tests
-$ pnpm run test
+## Domain-Driven Design
 
-# e2e tests
-$ pnpm run test:e2e
+El proyecto aplica conceptos de Domain-Driven Design para mantener el dominio aislado y expresivo.
 
-# test coverage
-$ pnpm run test:cov
+Conceptos utilizados:
+
+- **Entities**: objetos con identidad propia.
+- **Ports**: contratos definidos desde el dominio para acceder a persistencia o servicios externos.
+- **Adapters**: implementaciones concretas de los puertos en infraestructura.
+- **Result Pattern**: respuesta explicita de exito o error sin depender de excepciones para el flujo esperado.
+- **Error Entity**: representacion uniforme de errores de dominio, base de datos, autenticacion o SDK.
+
+## Configuracion Local
+
+La API carga configuracion desde la carpeta:
+
+```txt
+config/
 ```
 
-## Deployment
+El archivo cargado depende de `NODE_ENV`:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+```txt
+config/.env.local
+config/.env.development
+config/.env.test
+config/.env.production
+Environment variables
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Para ejecucion local, normalmente se usa el ambiente `local`.
 
-## Resources
+Ejemplo basado en `config/.env.local.example`:
 
-Check out a few resources that may come in handy when working with NestJS:
+```env
+GOOGLE_API_KEY=api_key_here
+PORT=3000
+MONGO_URI=mongodb://vault_history:vault_history_password@localhost:27017/vault_history_local?authSource=admin
+JWT_SECRET=Your-Super-Secret-Key-That-Should-Be-Long-And-Secure
+JWT_ISSUER=VaultHistory.User.Api
+JWT_AUDIENCE=VaultHistory.User.Clients
+SWAGGER_ENABLE=true
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Cuando la API corre dentro de Docker, la connection string debe usar el nombre del servicio de MongoDB:
 
-## Support
+```txt
+mongodb://vault_history:vault_history_password@mongodb:27017/vault_history_local?authSource=admin
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Instalar Dependencias
 
-## Stay in touch
+Desde la raiz del repositorio:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+pnpm install
+```
 
-## License
+## Ejecutar Con pnpm
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Desde la raiz del repositorio:
+
+```bash
+pnpm run start
+```
+
+Para ejecutar en modo watch:
+
+```bash
+pnpm run start:dev
+```
+
+Para ejecutar en modo debug:
+
+```bash
+pnpm run start:debug
+```
+
+Para compilar el proyecto:
+
+```bash
+pnpm run build
+```
+
+Para ejecutar la version compilada en modo produccion:
+
+```bash
+pnpm run start:prod
+```
+
+La API queda disponible por defecto en:
+
+```txt
+http://localhost:3000
+```
+
+Swagger, cuando `SWAGGER_ENABLE=true` y el ambiente no es `production`:
+
+```txt
+http://localhost:3000/docs/v1
+```
+
+## Ejecutar Con Docker
+
+La configuracion Docker esta ubicada dentro de la carpeta:
+
+```txt
+docker/
+```
+
+Estructura:
+
+```txt
+docker/
+  Dockerfile
+  Dockerfile.dockerignore
+  docker-compose.yml
+```
+
+Para levantar la API junto con MongoDB y Mongo Express:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Tambien se puede ejecutar desde la carpeta `docker`:
+
+```bash
+cd docker
+docker compose up --build
+```
+
+La API queda disponible en:
+
+```txt
+http://localhost:3000
+```
+
+Swagger:
+
+```txt
+http://localhost:3000/docs/v1
+```
+
+Mongo Express:
+
+```txt
+http://localhost:8081
+```
+
+Credenciales de Mongo Express definidas en `docker/docker-compose.yml`:
+
+```txt
+Username: admin
+Password: admin
+```
+
+Para detener los contenedores:
+
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+Para detener los contenedores y eliminar el volumen de MongoDB:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+```
+
+## MongoDB Y Mongoose
+
+El proyecto usa MongoDB como base de datos y Mongoose como ODM.
+
+El modelo persistente principal se encuentra en:
+
+```txt
+src/infrastructure/database/history.model.ts
+```
+
+Campos principales del documento `History`:
+
+```txt
+userId
+date
+theme
+content
+character
+isActive
+generateAt
+```
+
+La coleccion almacena historias generadas para un usuario. Las eliminaciones funcionales se manejan mediante `isActive=false`, por lo que las consultas de listado retornan solo historias activas.
+
+## Flujo Recomendado Para Cambios De Base De Datos
+
+Cada vez que se modifique el modelo persistente:
+
+```txt
+1. Actualizar el schema Mongoose.
+2. Actualizar el mapper entre modelo y entidad, si aplica.
+3. Ajustar puertos/adaptadores de repositorio, si aplica.
+4. Actualizar o agregar pruebas unitarias.
+5. Actualizar o agregar pruebas de integracion cuando cambie el comportamiento persistente.
+6. Probar el proyecto localmente.
+```
+
+Comandos utiles:
+
+```bash
+pnpm run test
+pnpm run test:e2e
+pnpm run test:cov
+```
+
+Si se desea probar Docker desde cero despues de cambios de persistencia:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+docker compose -f docker/docker-compose.yml up --build
+```
+
+## Tests
+
+Ejecutar todos los tests unitarios:
+
+```bash
+pnpm run test
+```
+
+Ejecutar tests en modo watch:
+
+```bash
+pnpm run test:watch
+```
+
+Ejecutar tests con cobertura:
+
+```bash
+pnpm run test:cov
+```
+
+Ejecutar tests end-to-end/integracion:
+
+```bash
+pnpm run test:e2e
+```
+
+Los tests de integracion usan `mongodb-memory-server`, por lo que levantan una instancia temporal de MongoDB para probar la API sin depender de la base local de Docker.
+
+## Calidad De Codigo
+
+Formatear codigo:
+
+```bash
+pnpm run format
+```
+
+Ejecutar ESLint con autofix:
+
+```bash
+pnpm run lint
+```
+
+## Herramientas Necesarias
+
+- Node.js 24
+- pnpm
+- Docker Desktop
+- MongoDB, opcional si se usa Docker
+- Google API Key para Gemini
+- Volta, opcional pero recomendado para fijar la version de Node.js
+
+Habilitar pnpm mediante Corepack:
+
+```bash
+corepack enable
+```
+
+## Manejo De Versiones Con Volta
+
+El proyecto declara versiones recomendadas de runtime en `package.json` mediante Volta:
+
+```json
+{
+  "volta": {
+    "node": "24.16.0",
+    "npm": "11.4.0"
+  }
+}
+```
+
+Volta es opcional, pero preferible para asegurar que todos los entornos de desarrollo usen la misma version de Node.js al entrar al repositorio.
+
+Instalar Volta:
+
+```bash
+winget install Volta.Volta
+```
+
+Verificar la instalacion:
+
+```bash
+volta --version
+```
+
+Una vez instalado, Volta detecta automaticamente la configuracion del proyecto y usa la version definida en `package.json`.
+
+Verificar versiones:
+
+```bash
+node --version
+pnpm --version
+```
