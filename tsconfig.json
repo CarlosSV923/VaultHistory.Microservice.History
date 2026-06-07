@@ -14,12 +14,11 @@
         "sourceMap": true,
         "outDir": "./dist",
         "rootDir": "./src",
-        "baseUrl": "./",
         "paths": {
-            "@domain/*": ["src/domain/*"],
-            "@application/*": ["src/application/*"],
-            "@api/*": ["src/api/*"],
-            "@infrastructure/*": ["src/infrastructure/*"]
+            "@domain/*": ["./src/domain/*"],
+            "@application/*": ["./src/application/*"],
+            "@api/*": ["./src/api/*"],
+            "@infrastructure/*": ["./src/infrastructure/*"]
         },
         "incremental": true,
         "skipLibCheck": true,

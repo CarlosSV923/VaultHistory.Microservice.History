@@ -2,5 +2,6 @@ allowBuilds:
   '@google/genai': true
   '@nestjs/core': true
   '@scarf/scarf': true
+  mongodb-memory-server: true
   protobufjs: true
   unrs-resolver: true
