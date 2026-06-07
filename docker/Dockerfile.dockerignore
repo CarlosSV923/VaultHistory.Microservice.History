@@ -1,0 +1,10 @@
+.git
+.github
+.vscode
+dist
+node_modules
+npm-debug.log
+pnpm-debug.log
+coverage
+docker
+*.tsbuildinfo
