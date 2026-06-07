@@ -13,7 +13,10 @@ import {
     GetHistoriesByFilterResponseDTO,
 } from '../dtos';
 import { ErrorCodeMapper } from '@api/utils/error-code.mapper';
-import { DeactivateHistoryByIdRequestDTO } from '@api/dtos/deactivate-history-by-id.dto';
+import {
+    DeactivateHistoryByIdRequestDTO,
+    DeactivateHistoryByIdResponseDTO,
+} from '@api/dtos/deactivate-history-by-id.dto';
 import {
     ApiBadRequestResponse,
     ApiBearerAuth,
@@ -27,6 +30,7 @@ import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
 import type { AuthenticatedUser } from '@api/auth/authenticated-user';
 import { CurrentUser } from '@api/auth/current-user.decorator';
+import { DeactivateHistoriesByUserIdResponseDTO } from '@api/dtos/deactivate-histories-by-user.dto';
 
 @ApiBearerAuth()
 @Controller({ path: 'history', version: '1' })
@@ -120,11 +124,11 @@ export class HistoryController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Patch(':id')
+    @Patch('deactivate-by-id/:id')
     @ApiOperation({ summary: 'Deactivate a history by its ID' })
     @ApiOkResponse({
         description: 'History deactivated successfully',
-        type: ErrorEntity,
+        type: DeactivateHistoryByIdResponseDTO,
     })
     @ApiBadRequestResponse({
         description: 'Validation or domain error',
@@ -159,7 +163,7 @@ export class HistoryController {
     @ApiOperation({ summary: 'Deactivate histories by user ID' })
     @ApiOkResponse({
         description: 'Histories deactivated successfully',
-        type: ErrorEntity,
+        type: DeactivateHistoriesByUserIdResponseDTO,
     })
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - invalid or missing JWT',
