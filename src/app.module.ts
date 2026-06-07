@@ -13,7 +13,7 @@ import { ApiModule } from '@api/api.module';
             envFilePath: [`config/.env.${process.env.NODE_ENV}`],
             isGlobal: true,
         }),
-        MongooseModule.forRoot(process.env.MONGODB_URI!),
+        MongooseModule.forRoot(process.env.MONGO_URI!),
         InfrastructureModule,
         ApplicationModule,
         ApiModule,

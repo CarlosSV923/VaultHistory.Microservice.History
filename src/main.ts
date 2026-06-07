@@ -14,7 +14,7 @@ async function bootstrap() {
     });
 
     const isProduction = process.env.NODE_ENV === 'production';
-    const isSwaggerEnabled = process.env.SWAGGER_ENABLED === 'true';
+    const isSwaggerEnabled = process.env.SWAGGER_ENABLE === 'true';
 
     if (!isProduction && isSwaggerEnabled) {
         logger.log('Setting up Swagger documentation');
@@ -22,6 +22,7 @@ async function bootstrap() {
             .setTitle('Vault History API')
             .setDescription('History microservice API')
             .setVersion('1.0')
+            .addBearerAuth()
             .addTag('History')
             .build();
 

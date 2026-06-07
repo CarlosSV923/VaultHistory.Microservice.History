@@ -4,6 +4,7 @@ import {
     Catch,
     ExceptionFilter,
     Logger,
+    NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -15,6 +16,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
+
+        if (exception instanceof NotFoundException) {
+            response.status(404).json({ ...ErrorEntity.NotFound('Resource not found') });
+            return;
+        }
 
         if (exception instanceof UnauthorizedException) {
             response.status(401).json({ ...ErrorEntity.AuthenticationError });

@@ -16,6 +16,7 @@ import { ErrorCodeMapper } from '@api/utils/error-code.mapper';
 import { DeactivateHistoryByIdRequestDTO } from '@api/dtos/deactivate-history-by-id.dto';
 import {
     ApiBadRequestResponse,
+    ApiBearerAuth,
     ApiCreatedResponse,
     ApiInternalServerErrorResponse,
     ApiOkResponse,
@@ -27,6 +28,7 @@ import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
 import type { AuthenticatedUser } from '@api/auth/authenticated-user';
 import { CurrentUser } from '@api/auth/current-user.decorator';
 
+@ApiBearerAuth()
 @Controller({ path: 'history', version: '1' })
 export class HistoryController {
     constructor(

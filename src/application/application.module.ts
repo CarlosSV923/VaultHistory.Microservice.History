@@ -5,9 +5,10 @@ import {
     GenerateHistoryUseCase,
     GetHistoriesByFilterUseCase,
 } from './use-cases';
+import { InfrastructureModule } from '@infrastructure/infrastructure.module';
 
 @Module({
-    imports: [],
+    imports: [InfrastructureModule],
     exports: [
         GenerateHistoryUseCase,
         GetHistoriesByFilterUseCase,
