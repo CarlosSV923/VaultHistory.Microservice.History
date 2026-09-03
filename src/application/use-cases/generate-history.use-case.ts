@@ -5,7 +5,6 @@ import type { AIServicePort } from '@domain/histories/ports/ai-service.port';
 import { AIServicePortToken, GenerateHistoryParams } from '@domain/histories/ports/ai-service.port';
 import type { HistoryRepositoryPort } from '@domain/histories/ports/history-repository.port';
 import { HistoryRepositoryPortToken } from '@domain/histories/ports/history-repository.port';
-import type { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class GenerateHistoryUseCase {
