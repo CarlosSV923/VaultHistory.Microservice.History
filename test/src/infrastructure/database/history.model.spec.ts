@@ -25,6 +25,12 @@ describe('History Model', () => {
             expect(paths.content.isRequired).toBe(true);
         });
 
+        it('should have type field as required', () => {
+            const paths = HistorySchema.paths;
+            expect(paths.type).toBeDefined();
+            expect(paths.type.isRequired).toBe(true);
+        });
+
         it('should have isActive field with default true', () => {
             const paths = HistorySchema.paths;
             expect(paths.isActive).toBeDefined();

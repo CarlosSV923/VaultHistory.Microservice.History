@@ -9,6 +9,10 @@ import { ResultEntity } from '../../src/domain/abstractions/result.entity';
 import { History, type HistoryDocument } from '../../src/infrastructure/database/history.model';
 import { createAuthToken } from './auth.helper';
 import { createIntegrationApp } from './test-app.factory';
+import {
+    HistoryType,
+    type HistoryType as HistoryTypeValue,
+} from '../../src/domain/histories/history.type.enum';
 
 type GenerateHistoryResponseBody = {
     history: string;
@@ -22,6 +26,7 @@ type ErrorResponseBody = {
 type HistoryResponseBody = {
     id: string;
     content: string;
+    type: HistoryTypeValue;
     date?: string;
     theme?: string;
     character?: string;
@@ -86,6 +91,7 @@ describe('History API integration', () => {
                 date: '1999-12-31',
                 theme: 'medieval fantasy',
                 character: 'Arthur',
+                type: HistoryType.QUERY,
             })
             .expect(201);
         const body = bodyOf<GenerateHistoryResponseBody>(response);
@@ -98,6 +104,7 @@ describe('History API integration', () => {
             date: '1999-12-31',
             theme: 'medieval fantasy',
             character: 'Arthur',
+            type: HistoryType.QUERY,
         });
 
         const saved = await historyModel.findOne({ userId: 'user-abc' }).lean();
@@ -109,7 +116,21 @@ describe('History API integration', () => {
             theme: 'medieval fantasy',
             character: 'Arthur',
             isActive: true,
+            type: HistoryType.QUERY,
         });
+    });
+
+    it('rejects generation when type is missing', async () => {
+        const token = createAuthToken({ sub: 'user-abc' });
+
+        await api()
+            .post('/api/v1/history/generate')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ theme: 'fantasy' })
+            .expect(400);
+
+        expect(aiMock.generateContent).not.toHaveBeenCalled();
+        expect(await historyModel.countDocuments()).toBe(0);
     });
 
     it('returns the mapped AI error when content generation fails', async () => {
@@ -122,7 +143,7 @@ describe('History API integration', () => {
         const response = await api()
             .post('/api/v1/history/generate')
             .set('Authorization', `Bearer ${token}`)
-            .send({ theme: 'fantasy' })
+            .send({ theme: 'fantasy', type: HistoryType.QUERY })
             .expect(500);
         const body = bodyOf<ErrorResponseBody>(response);
 
@@ -142,6 +163,7 @@ describe('History API integration', () => {
                 character: 'Arthur',
                 date: '1999-12-31',
                 isActive: true,
+                type: HistoryType.QUERY,
             },
             {
                 userId: 'user-123',
@@ -150,6 +172,7 @@ describe('History API integration', () => {
                 character: 'Arthur',
                 date: '1999-12-31',
                 isActive: false,
+                type: HistoryType.QUERY,
             },
             {
                 userId: 'user-123',
@@ -158,6 +181,7 @@ describe('History API integration', () => {
                 character: 'Arthur',
                 date: '1999-12-31',
                 isActive: true,
+                type: HistoryType.SUBSCRIPTION,
             },
             {
                 userId: 'another-user',
@@ -166,6 +190,7 @@ describe('History API integration', () => {
                 character: 'Arthur',
                 date: '1999-12-31',
                 isActive: true,
+                type: HistoryType.QUERY,
             },
         ]);
 
@@ -184,6 +209,7 @@ describe('History API integration', () => {
             theme: 'fantasy',
             character: 'Arthur',
             date: '1999-12-31',
+            type: HistoryType.QUERY,
         });
         expect(body.histories[0].id).toEqual(expect.any(String));
         expect(body.histories[0].generateAt).toBeDefined();
@@ -194,6 +220,7 @@ describe('History API integration', () => {
             userId: 'user-123',
             content: 'History to deactivate',
             isActive: true,
+            type: HistoryType.QUERY,
         });
 
         const token = createAuthToken({ sub: 'user-123' });
@@ -219,6 +246,7 @@ describe('History API integration', () => {
             userId: 'owner-user',
             content: 'Private history',
             isActive: true,
+            type: HistoryType.QUERY,
         });
 
         const token = createAuthToken({ sub: 'another-user' });
@@ -239,9 +267,9 @@ describe('History API integration', () => {
 
     it('deactivates all active histories for the authenticated user', async () => {
         await historyModel.insertMany([
-            { userId: 'user-123', content: 'One', isActive: true },
-            { userId: 'user-123', content: 'Two', isActive: true },
-            { userId: 'other-user', content: 'Other', isActive: true },
+            { userId: 'user-123', content: 'One', isActive: true, type: HistoryType.QUERY },
+            { userId: 'user-123', content: 'Two', isActive: true, type: HistoryType.QUERY },
+            { userId: 'other-user', content: 'Other', isActive: true, type: HistoryType.QUERY },
         ]);
 
         const token = createAuthToken({ sub: 'user-123' });
@@ -264,7 +292,10 @@ describe('History API integration', () => {
     });
 
     it('rejects requests without JWT', async () => {
-        await api().post('/api/v1/history/generate').send({ theme: 'fantasy' }).expect(401);
+        await api()
+            .post('/api/v1/history/generate')
+            .send({ theme: 'fantasy', type: HistoryType.QUERY })
+            .expect(401);
     });
 
     it('rejects requests with an invalid JWT', async () => {

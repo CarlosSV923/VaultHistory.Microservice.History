@@ -3,6 +3,7 @@ import { ErrorCodes, ErrorEntity } from '@domain/abstractions/error.entity';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { type AIServicePort } from '@domain/histories/ports/ai-service.port';
 import { type HistoryRepositoryPort } from '@domain/histories/ports/history-repository.port';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 describe('GenerateHistoryUseCase', () => {
     let useCase: GenerateHistoryUseCase;
@@ -30,6 +31,7 @@ describe('GenerateHistoryUseCase', () => {
             date: '2024-01-01',
             theme: 'Adventure',
             character: 'Hero',
+            type: HistoryType.QUERY,
         };
         const generatedContent = 'Generated history content';
 
@@ -50,11 +52,13 @@ describe('GenerateHistoryUseCase', () => {
         expect(savedHistory?.theme).toBe(params.theme);
         expect(savedHistory?.character).toBe(params.character);
         expect(savedHistory?.isActive).toBe(true);
+        expect(savedHistory?.type).toBe(params.type);
     });
 
     it('should return failure when AI service fails', async () => {
         const params = {
             userId: 'user123',
+            type: HistoryType.SUBSCRIPTION,
         };
         const error = ErrorEntity.SDKError('Failed to generate content');
 
@@ -72,6 +76,7 @@ describe('GenerateHistoryUseCase', () => {
         const params = {
             userId: 'user123',
             theme: 'Science Fiction',
+            type: HistoryType.QUERY,
         };
         const generatedContent = 'Generated sci-fi content';
         const error = ErrorEntity.DatabaseError('Failed to save history');

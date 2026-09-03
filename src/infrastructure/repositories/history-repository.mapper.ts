@@ -17,6 +17,7 @@ export class HistoryRepositoryMapper {
             character: historyModel.character,
             isActive: historyModel.isActive,
             generateAt: historyModel.generateAt,
+            type: historyModel.type,
         });
     }
 
@@ -24,7 +25,7 @@ export class HistoryRepositoryMapper {
         entity: HistoryEntity,
     ): Pick<
         History,
-        'userId' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt'
+        'userId' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt' | 'type'
     > {
         return {
             userId: entity.userId,
@@ -34,6 +35,7 @@ export class HistoryRepositoryMapper {
             character: entity.character,
             isActive: entity.isActive,
             generateAt: entity.generateAt,
+            type: entity.type,
         };
     }
 }

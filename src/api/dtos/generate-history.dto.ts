@@ -1,7 +1,19 @@
-import { IsOptional, IsString } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    HistoryType,
+    type HistoryType as HistoryTypeValue,
+} from '@domain/histories/history.type.enum';
 
 export class GenerateHistoryRequestDTO {
+    @ApiProperty({
+        enum: Object.values(HistoryType),
+        example: HistoryType.QUERY,
+        description: 'Type of history generation',
+    })
+    @IsIn(Object.values(HistoryType))
+    type!: HistoryTypeValue;
+
     @ApiPropertyOptional({
         example: '1999-12-31',
         description: 'Date used to generate the history',

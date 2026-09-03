@@ -115,6 +115,7 @@ export class HistoryController {
             histories: result.Value.map((history) => ({
                 id: history.id,
                 content: history.content,
+                type: history.type,
                 date: history.date,
                 theme: history.theme,
                 character: history.character,

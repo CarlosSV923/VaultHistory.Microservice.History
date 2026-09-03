@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ResultEntity } from '@domain/abstractions/result.entity';
-import { AIServicePort, GenerateContentParams } from '@domain/histories/ports/ai-service.port';
+import { AIServicePort, GenerateHistoryParams } from '@domain/histories/ports/ai-service.port';
 import { ConfigService } from '@nestjs/config';
 import { GenerateContentResponse, GoogleGenAI } from '@google/genai';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
@@ -21,7 +21,7 @@ export class GeminiAdapter implements AIServicePort {
         this.ai = new GoogleGenAI({ apiKey });
     }
 
-    private getPrompt(data: GenerateContentParams): string {
+    private getPrompt(data: GenerateHistoryParams): string {
         const { date, theme, character } = data;
 
         let prompt =
@@ -54,7 +54,7 @@ export class GeminiAdapter implements AIServicePort {
         });
     }
 
-    async generateContent(data: GenerateContentParams): Promise<ResultEntity<string>> {
+    async generateContent(data: GenerateHistoryParams): Promise<ResultEntity<string>> {
         const prompt = this.getPrompt(data);
 
         const observable$ = defer(() => this.callGeminiAPI(prompt)).pipe(

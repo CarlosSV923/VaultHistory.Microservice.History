@@ -8,6 +8,7 @@ import type {
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 import { type Response } from 'express';
 
 type ResponseBody = Record<string, unknown>;
@@ -71,6 +72,7 @@ describe('HistoryController', () => {
                 date: '2024-01-01',
                 theme: 'Adventure',
                 character: 'Hero',
+                type: HistoryType.QUERY,
             };
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
@@ -95,7 +97,11 @@ describe('HistoryController', () => {
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.failure(error));
 
-            await controller.generateHistory({}, user, asExpressResponse(response));
+            await controller.generateHistory(
+                { type: HistoryType.QUERY },
+                user,
+                asExpressResponse(response),
+            );
 
             expect(response.status.mock.calls).toEqual([[400]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
@@ -115,6 +121,7 @@ describe('HistoryController', () => {
                 character: 'Hero',
                 isActive: true,
                 generateAt,
+                type: HistoryType.SUBSCRIPTION,
             });
 
             getHistoriesByFilterUseCase.execute.mockResolvedValue(ResultEntity.success([history]));
@@ -141,6 +148,7 @@ describe('HistoryController', () => {
                             {
                                 id: 'history123',
                                 content: 'Content',
+                                type: HistoryType.SUBSCRIPTION,
                                 date: '2024-01-01',
                                 theme: 'Adventure',
                                 character: 'Hero',

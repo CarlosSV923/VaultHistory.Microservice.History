@@ -1,11 +1,13 @@
 import { type ResultEntity } from '../../abstractions/result.entity';
 import { type HistoryEntity } from '../history.entity';
+import type { HistoryType } from '../history.type.enum';
 
 export interface GetHistoryFilter {
     userId: string;
     date?: string;
     theme?: string;
     character?: string;
+    type?: HistoryType;
 }
 
 export interface HistoryRepositoryPort {

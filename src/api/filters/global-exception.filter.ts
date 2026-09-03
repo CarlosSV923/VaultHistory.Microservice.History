@@ -1,6 +1,7 @@
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import {
     ArgumentsHost,
+    BadRequestException,
     Catch,
     ExceptionFilter,
     Logger,
@@ -16,6 +17,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
+
+        if (exception instanceof BadRequestException) {
+            response.status(400).json({ ...ErrorEntity.ValidationError(exception.message) });
+            return;
+        }
 
         if (exception instanceof NotFoundException) {
             response.status(404).json({ ...ErrorEntity.NotFound('Resource not found') });

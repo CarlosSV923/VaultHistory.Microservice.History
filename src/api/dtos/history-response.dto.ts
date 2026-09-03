@@ -1,4 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    HistoryType,
+    type HistoryType as HistoryTypeValue,
+} from '@domain/histories/history.type.enum';
 
 export class HistoryResponseDTO {
     @ApiProperty({ example: '665f1b2c9a7e4a001234abcd' })
@@ -6,6 +10,9 @@ export class HistoryResponseDTO {
 
     @ApiProperty({ example: 'Once upon a time...' })
     content!: string;
+
+    @ApiProperty({ enum: Object.values(HistoryType), example: HistoryType.QUERY })
+    type!: HistoryTypeValue;
 
     @ApiPropertyOptional({ example: '1999-12-31' })
     date?: string;

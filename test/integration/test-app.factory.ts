@@ -1,4 +1,4 @@
-import { type INestApplication, VersioningType } from '@nestjs/common';
+import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { AppModule as NestAppModule } from '../../src/app.module';
@@ -42,6 +42,7 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
 
     const app = moduleRef.createNestApplication();
 
+    app.useGlobalPipes(new ValidationPipe());
     app.setGlobalPrefix('api');
     app.enableVersioning({
         type: VersioningType.URI,

@@ -1,9 +1,12 @@
+import type { HistoryType } from './history.type.enum';
+
 export type CreateHistoryParams = {
     userId: string;
     content: string;
     date?: string;
     theme?: string;
     character?: string;
+    type: HistoryType;
 };
 
 export type RestoreHistoryParams = {
@@ -15,6 +18,7 @@ export type RestoreHistoryParams = {
     character?: string;
     isActive: boolean;
     generateAt: Date;
+    type: HistoryType;
 };
 
 export class HistoryEntity {
@@ -27,6 +31,7 @@ export class HistoryEntity {
         private readonly _character: string | undefined,
         private readonly _isActive: boolean,
         private readonly _generateAt: Date,
+        private readonly _type: HistoryType,
     ) {}
 
     static create(params: CreateHistoryParams): HistoryEntity {
@@ -39,6 +44,7 @@ export class HistoryEntity {
             params.character,
             true,
             new Date(),
+            params.type,
         );
     }
 
@@ -52,6 +58,7 @@ export class HistoryEntity {
             params.character,
             params.isActive,
             params.generateAt,
+            params.type,
         );
     }
 
@@ -85,5 +92,9 @@ export class HistoryEntity {
 
     get generateAt(): Date {
         return this._generateAt;
+    }
+
+    get type(): HistoryType {
+        return this._type;
     }
 }
