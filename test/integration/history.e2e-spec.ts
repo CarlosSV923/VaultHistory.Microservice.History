@@ -81,17 +81,48 @@ describe('History API integration', () => {
         return request(httpServer);
     }
 
+    it('generates a subscription history with the configured job token', async () => {
+        const response = await api()
+            .post('/api/v1/history/generate/subscription')
+            .set('Authorization', 'integration-job-token')
+            .send({ userId: 'subscription-user', theme: 'fantasy' })
+            .expect(201);
+
+        expect(bodyOf<GenerateHistoryResponseBody>(response)).toEqual({
+            history: 'Generated integration history',
+        });
+        expect(aiMock.generateContent).toHaveBeenCalledWith({
+            userId: 'subscription-user',
+            theme: 'fantasy',
+            type: HistoryType.SUBSCRIPTION,
+        });
+    });
+
+    it.each([undefined, 'invalid-job-token'])(
+        'rejects subscription generation with job token %p',
+        async (token) => {
+            const requestBuilder = api().post('/api/v1/history/generate/subscription');
+
+            if (token) {
+                requestBuilder.set('Authorization', token);
+            }
+
+            await requestBuilder.send({ userId: 'subscription-user' }).expect(401);
+
+            expect(aiMock.generateContent).not.toHaveBeenCalled();
+        },
+    );
+
     it('generates a history and persists it for the authenticated user', async () => {
         const token = createAuthToken({ sub: 'user-abc' });
 
         const response = await api()
-            .post('/api/v1/history/generate')
+            .post('/api/v1/history/generate/query')
             .set('Authorization', `Bearer ${token}`)
             .send({
                 date: '1999-12-31',
                 theme: 'medieval fantasy',
                 character: 'Arthur',
-                type: HistoryType.QUERY,
             })
             .expect(201);
         const body = bodyOf<GenerateHistoryResponseBody>(response);
@@ -120,19 +151,6 @@ describe('History API integration', () => {
         });
     });
 
-    it('rejects generation when type is missing', async () => {
-        const token = createAuthToken({ sub: 'user-abc' });
-
-        await api()
-            .post('/api/v1/history/generate')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ theme: 'fantasy' })
-            .expect(400);
-
-        expect(aiMock.generateContent).not.toHaveBeenCalled();
-        expect(await historyModel.countDocuments()).toBe(0);
-    });
-
     it('returns the mapped AI error when content generation fails', async () => {
         aiMock.generateContent.mockResolvedValueOnce(
             ResultEntity.failure(ErrorEntity.SDKError('Gemini failed')),
@@ -141,9 +159,9 @@ describe('History API integration', () => {
         const token = createAuthToken({ sub: 'user-abc' });
 
         const response = await api()
-            .post('/api/v1/history/generate')
+            .post('/api/v1/history/generate/query')
             .set('Authorization', `Bearer ${token}`)
-            .send({ theme: 'fantasy', type: HistoryType.QUERY })
+            .send({ theme: 'fantasy' })
             .expect(500);
         const body = bodyOf<ErrorResponseBody>(response);
 
@@ -292,10 +310,7 @@ describe('History API integration', () => {
     });
 
     it('rejects requests without JWT', async () => {
-        await api()
-            .post('/api/v1/history/generate')
-            .send({ theme: 'fantasy', type: HistoryType.QUERY })
-            .expect(401);
+        await api().post('/api/v1/history/generate/query').send({ theme: 'fantasy' }).expect(401);
     });
 
     it('rejects requests with an invalid JWT', async () => {

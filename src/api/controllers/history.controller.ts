@@ -7,7 +7,8 @@ import {
     GetHistoriesByFilterUseCase,
 } from '@application/use-cases';
 import {
-    GenerateHistoryRequestDTO,
+    GenerateSubHistoryRequestDTO,
+    GenerateQueryHistoryRequestDTO,
     GenerateHistoryResponseDTO,
     GetHistoriesByFilterRequestDTO,
     GetHistoriesByFilterResponseDTO,
@@ -28,9 +29,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
+import { JobTokenAuthGuard } from '@api/auth/job-token-auth.guard';
 import type { AuthenticatedUser } from '@api/auth/authenticated-user';
 import { CurrentUser } from '@api/auth/current-user.decorator';
 import { DeactivateHistoriesByUserIdResponseDTO } from '@api/dtos/deactivate-histories-by-user.dto';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @ApiBearerAuth()
 @Controller({ path: 'history', version: '1' })
@@ -42,8 +45,8 @@ export class HistoryController {
         private readonly deactivateHistoriesByUserIdUseCase: DeactivateHistoriesByUserIdUseCase,
     ) {}
 
-    @UseGuards(JwtAuthGuard)
-    @Post('generate')
+    @UseGuards(JobTokenAuthGuard)
+    @Post('generate/subscription')
     @ApiOperation({ summary: 'Generate a new history based on provided criteria' })
     @ApiCreatedResponse({
         description: 'History generated successfully',
@@ -58,16 +61,54 @@ export class HistoryController {
         type: ErrorEntity,
     })
     @ApiUnauthorizedResponse({
+        description: 'Unauthorized - invalid or missing job token',
+        type: ErrorEntity,
+    })
+    async generateSubHistory(
+        @Body() body: GenerateSubHistoryRequestDTO,
+        @Res() response: express.Response,
+    ) {
+        const result = await this.generateHistoryUseCase.execute({
+            type: HistoryType.SUBSCRIPTION,
+            ...body,
+        });
+
+        if (result.isFailure) {
+            const error = result.error;
+            response.status(ErrorCodeMapper.toHttpStatusCode(error.code)).json({ ...error });
+            return;
+        }
+
+        response.status(201).json({ history: result.Value });
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('generate/query')
+    @ApiOperation({ summary: 'Generate a new history based on provided criteria' })
+    @ApiCreatedResponse({
+        description: 'History generated successfully',
+        type: GenerateQueryHistoryRequestDTO,
+    })
+    @ApiBadRequestResponse({
+        description: 'Validation or domain error',
+        type: ErrorEntity,
+    })
+    @ApiInternalServerErrorResponse({
+        description: 'Unhandled server error',
+        type: ErrorEntity,
+    })
+    @ApiUnauthorizedResponse({
         description: 'Unauthorized - invalid or missing JWT',
         type: ErrorEntity,
     })
-    async generateHistory(
-        @Body() body: GenerateHistoryRequestDTO,
+    async generateQueryHistory(
+        @Body() body: GenerateQueryHistoryRequestDTO,
         @CurrentUser() user: AuthenticatedUser,
         @Res() response: express.Response,
     ) {
         const result = await this.generateHistoryUseCase.execute({
             userId: user.userId,
+            type: HistoryType.QUERY,
             ...body,
         });
 

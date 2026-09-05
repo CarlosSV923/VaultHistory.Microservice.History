@@ -1,18 +1,39 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-    HistoryType,
-    type HistoryType as HistoryTypeValue,
-} from '@domain/histories/history.type.enum';
+import { IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class GenerateHistoryRequestDTO {
-    @ApiProperty({
-        enum: Object.values(HistoryType),
-        example: HistoryType.QUERY,
-        description: 'Type of history generation',
+export class GenerateQueryHistoryRequestDTO {
+    @ApiPropertyOptional({
+        example: '1999-12-31',
+        description: 'Date used to generate the history',
     })
-    @IsIn(Object.values(HistoryType))
-    type!: HistoryTypeValue;
+    @IsString()
+    @IsOptional()
+    date?: string;
+
+    @ApiPropertyOptional({
+        example: 'medieval fantasy',
+        description: 'Theme for the generated history',
+    })
+    @IsString()
+    @IsOptional()
+    theme?: string;
+
+    @ApiPropertyOptional({
+        example: 'Arthur',
+        description: 'Character for the generated history',
+    })
+    @IsString()
+    @IsOptional()
+    character?: string;
+}
+
+export class GenerateSubHistoryRequestDTO {
+    @ApiPropertyOptional({
+        example: 'user-123',
+        description: 'User ID for whom the history is generated',
+    })
+    @IsString()
+    userId!: string;
 
     @ApiPropertyOptional({
         example: '1999-12-31',

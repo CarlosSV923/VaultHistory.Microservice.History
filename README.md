@@ -97,13 +97,16 @@ Incluye:
 Endpoints principales:
 
 ```txt
-POST  /api/v1/history/generate
+POST  /api/v1/history/generate/subscription
+POST  /api/v1/history/generate/query
 GET   /api/v1/history/list
 PATCH /api/v1/history/deactivate-by-id/:id
 PATCH /api/v1/history/deactivate-by-user
 ```
 
-Todos los endpoints de historias requieren un JWT valido mediante `Authorization: Bearer <token>`.
+Los endpoints de consulta y administracion requieren un JWT valido mediante
+`Authorization: Bearer <token>`. El endpoint `POST /api/v1/history/generate/subscription`
+requiere que el valor exacto del header `Authorization` sea igual a `AUTH_TOKEN_JOB`.
 
 ## Domain-Driven Design
 

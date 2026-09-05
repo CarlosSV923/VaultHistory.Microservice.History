@@ -65,24 +65,24 @@ describe('HistoryController', () => {
         );
     });
 
-    describe('generateHistory', () => {
+    describe('generateQueryHistory', () => {
         it('should generate history and return created response', async () => {
             const response = createResponse();
             const body = {
                 date: '2024-01-01',
                 theme: 'Adventure',
                 character: 'Hero',
-                type: HistoryType.QUERY,
             };
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
 
-            await controller.generateHistory(body, user, asExpressResponse(response));
+            await controller.generateQueryHistory(body, user, asExpressResponse(response));
 
             expect(generateHistoryUseCase.execute.mock.calls).toEqual([
                 [
                     {
                         userId: 'user123',
+                        type: HistoryType.QUERY,
                         ...body,
                     },
                 ],
@@ -97,14 +97,32 @@ describe('HistoryController', () => {
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.failure(error));
 
-            await controller.generateHistory(
-                { type: HistoryType.QUERY },
-                user,
-                asExpressResponse(response),
-            );
+            await controller.generateQueryHistory({}, user, asExpressResponse(response));
 
             expect(response.status.mock.calls).toEqual([[400]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
+        });
+    });
+
+    describe('generateSubHistory', () => {
+        it('should generate a subscription history for the user in the request body', async () => {
+            const response = createResponse();
+            const body = { userId: 'subscription-user', theme: 'Adventure' };
+
+            generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
+
+            await controller.generateSubHistory(body, asExpressResponse(response));
+
+            expect(generateHistoryUseCase.execute.mock.calls).toEqual([
+                [
+                    {
+                        type: HistoryType.SUBSCRIPTION,
+                        ...body,
+                    },
+                ],
+            ]);
+            expect(response.status.mock.calls).toEqual([[201]]);
+            expect(response.json.mock.calls).toEqual([[{ history: 'Generated' }]]);
         });
     });
 
