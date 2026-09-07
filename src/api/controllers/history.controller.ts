@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, Res, Patch, Param, UseGuards } from '@nestjs/common';
-import express from 'express';
+import type { Response } from 'express';
 import {
     GenerateHistoryUseCase,
     DeactivateHistoriesByUserIdUseCase,
@@ -66,7 +66,7 @@ export class HistoryController {
     })
     async generateSubHistory(
         @Body() body: GenerateSubHistoryRequestDTO,
-        @Res() response: express.Response,
+        @Res() response: Response,
     ) {
         const result = await this.generateHistoryUseCase.execute({
             type: HistoryType.SUBSCRIPTION,
@@ -104,7 +104,7 @@ export class HistoryController {
     async generateQueryHistory(
         @Body() body: GenerateQueryHistoryRequestDTO,
         @CurrentUser() user: AuthenticatedUser,
-        @Res() response: express.Response,
+        @Res() response: Response,
     ) {
         const result = await this.generateHistoryUseCase.execute({
             userId: user.userId,
@@ -139,7 +139,7 @@ export class HistoryController {
     async getHistoriesByFilter(
         @Query() filter: GetHistoriesByFilterRequestDTO,
         @CurrentUser() user: AuthenticatedUser,
-        @Res() response: express.Response,
+        @Res() response: Response,
     ) {
         const result = await this.getHistoriesByFilterUseCase.execute({
             userId: user.userId,
@@ -187,7 +187,7 @@ export class HistoryController {
     async deactivateHistoryById(
         @Param() params: DeactivateHistoryByIdRequestDTO,
         @CurrentUser() user: AuthenticatedUser,
-        @Res() response: express.Response,
+        @Res() response: Response,
     ) {
         const result = await this.deactivateHistoryByIdUseCase.execute(params.id, user.userId);
 
@@ -217,7 +217,7 @@ export class HistoryController {
     })
     async deactivateHistoriesByUserId(
         @CurrentUser() user: AuthenticatedUser,
-        @Res() response: express.Response,
+        @Res() response: Response,
     ) {
         const userId = user.userId;
         const result = await this.deactivateHistoriesByUserIdUseCase.execute(userId);
