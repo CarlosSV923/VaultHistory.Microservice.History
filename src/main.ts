@@ -7,6 +7,7 @@ async function bootstrap() {
     const logger = new Logger('Bootstrap');
     const app = await NestFactory.create(AppModule);
 
+    app.enableShutdownHooks();
     app.useGlobalPipes(new ValidationPipe());
     app.setGlobalPrefix('api');
     app.enableVersioning({

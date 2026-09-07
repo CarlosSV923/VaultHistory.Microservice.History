@@ -212,70 +212,13 @@ http://localhost:3000/docs/v1
 
 ## Ejecutar Con Docker
 
-La configuracion Docker esta ubicada dentro de la carpeta:
-
-```txt
-docker/
-```
-
-Estructura:
-
-```txt
-docker/
-  Dockerfile
-  Dockerfile.dockerignore
-  docker-compose.yml
-```
-
-Para levantar la API junto con MongoDB y Mongo Express:
+La construcción de History y MongoDB se administra desde [Vault.History.System](https://github.com/CarlosSV923/Vault.History.System). Ese repositorio contiene el Dockerfile y el Compose únicos del sistema:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose up --build -d
 ```
 
-Tambien se puede ejecutar desde la carpeta `docker`:
-
-```bash
-cd docker
-docker compose up --build
-```
-
-La API queda disponible en:
-
-```txt
-http://localhost:3000
-```
-
-Swagger:
-
-```txt
-http://localhost:3000/docs/v1
-```
-
-Mongo Express:
-
-```txt
-http://localhost:8081
-```
-
-Credenciales de Mongo Express definidas en `docker/docker-compose.yml`:
-
-```txt
-Username: admin
-Password: admin
-```
-
-Para detener los contenedores:
-
-```bash
-docker compose -f docker/docker-compose.yml down
-```
-
-Para detener los contenedores y eliminar el volumen de MongoDB:
-
-```bash
-docker compose -f docker/docker-compose.yml down -v
-```
+History queda disponible en `http://localhost:3001` para evitar el puerto utilizado internamente por Jobs. La configuración permite iniciar el contenedor con un placeholder de Gemini; se requiere `GOOGLE_API_KEY` real únicamente al generar una historia.
 
 ## MongoDB Y Mongoose
 
@@ -322,11 +265,11 @@ pnpm run test:e2e
 pnpm run test:cov
 ```
 
-Si se desea probar Docker desde cero despues de cambios de persistencia:
+Si se desea probar Docker desde cero después de cambios de persistencia, desde `Vault.History.System`:
 
 ```bash
-docker compose -f docker/docker-compose.yml down -v
-docker compose -f docker/docker-compose.yml up --build
+docker compose down --volumes
+docker compose up --build -d
 ```
 
 ## Tests
