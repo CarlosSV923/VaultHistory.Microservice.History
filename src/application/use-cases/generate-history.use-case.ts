@@ -15,6 +15,11 @@ export class GenerateHistoryUseCase {
         private readonly aiServicePort: AIServicePort,
     ) {}
     async execute(params: GenerateHistoryParams): Promise<ResultEntity<string>> {
+        if (params.idempotencyKey) {
+            const existing = await this.historyRepositoryPort.getByIdempotencyKey(params.idempotencyKey);
+            if (existing.isFailure) return ResultEntity.failure(existing.error);
+            if (existing.Value) return ResultEntity.success(existing.Value.content);
+        }
         const contentResult = await this.aiServicePort.generateContent(params);
 
         if (contentResult.isFailure) {
@@ -28,6 +33,7 @@ export class GenerateHistoryUseCase {
             theme: params.theme,
             character: params.character,
             type: params.type,
+            idempotencyKey: params.idempotencyKey,
         });
 
         const saveResult = await this.historyRepositoryPort.saveHistory(newHistory);

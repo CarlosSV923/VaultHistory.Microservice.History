@@ -25,6 +25,9 @@ export class History {
     @Prop({ required: false })
     character?: string;
 
+    @Prop({ required: false, unique: true, sparse: true })
+    idempotencyKey?: string;
+
     @Prop({ default: true })
     isActive!: boolean;
 

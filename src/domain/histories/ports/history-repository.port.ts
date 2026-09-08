@@ -13,6 +13,7 @@ export interface GetHistoryFilter {
 export interface HistoryRepositoryPort {
     saveHistory(entity: HistoryEntity): Promise<ResultEntity<void>>;
     getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>>;
+    getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>>;
     deactivateByUserId(userId: string): Promise<ResultEntity<void>>;
     deactivateById(id: string, userId: string): Promise<ResultEntity<void>>;
 }

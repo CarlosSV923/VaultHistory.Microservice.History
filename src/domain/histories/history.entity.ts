@@ -7,6 +7,7 @@ export type CreateHistoryParams = {
     theme?: string;
     character?: string;
     type: HistoryType;
+    idempotencyKey?: string;
 };
 
 export type RestoreHistoryParams = {
@@ -19,6 +20,7 @@ export type RestoreHistoryParams = {
     isActive: boolean;
     generateAt: Date;
     type: HistoryType;
+    idempotencyKey?: string;
 };
 
 export class HistoryEntity {
@@ -32,6 +34,7 @@ export class HistoryEntity {
         private readonly _isActive: boolean,
         private readonly _generateAt: Date,
         private readonly _type: HistoryType,
+        private readonly _idempotencyKey: string | undefined,
     ) {}
 
     static create(params: CreateHistoryParams): HistoryEntity {
@@ -45,6 +48,7 @@ export class HistoryEntity {
             true,
             new Date(),
             params.type,
+            params.idempotencyKey,
         );
     }
 
@@ -59,6 +63,7 @@ export class HistoryEntity {
             params.isActive,
             params.generateAt,
             params.type,
+            params.idempotencyKey,
         );
     }
 
@@ -97,4 +102,6 @@ export class HistoryEntity {
     get type(): HistoryType {
         return this._type;
     }
+
+    get idempotencyKey(): string | undefined { return this._idempotencyKey; }
 }
