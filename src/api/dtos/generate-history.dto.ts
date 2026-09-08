@@ -58,6 +58,10 @@ export class GenerateSubHistoryRequestDTO {
     @IsString()
     @IsOptional()
     character?: string;
+
+    @IsString()
+    @IsOptional()
+    idempotencyKey?: string;
 }
 
 export class GenerateHistoryResponseDTO {

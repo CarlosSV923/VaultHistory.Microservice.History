@@ -7,6 +7,7 @@ export interface GenerateHistoryParams {
     date?: string;
     theme?: string;
     character?: string;
+    idempotencyKey?: string;
 }
 
 export interface AIServicePort {

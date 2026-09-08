@@ -18,6 +18,7 @@ export class HistoryRepositoryMapper {
             isActive: historyModel.isActive,
             generateAt: historyModel.generateAt,
             type: historyModel.type,
+            idempotencyKey: historyModel.idempotencyKey,
         });
     }
 
@@ -25,7 +26,7 @@ export class HistoryRepositoryMapper {
         entity: HistoryEntity,
     ): Pick<
         History,
-        'userId' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt' | 'type'
+        'userId' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt' | 'type' | 'idempotencyKey'
     > {
         return {
             userId: entity.userId,
@@ -36,6 +37,7 @@ export class HistoryRepositoryMapper {
             isActive: entity.isActive,
             generateAt: entity.generateAt,
             type: entity.type,
+            idempotencyKey: entity.idempotencyKey,
         };
     }
 }

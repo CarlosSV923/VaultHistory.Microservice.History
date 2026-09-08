@@ -60,6 +60,16 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
         }
     }
 
+    async getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>> {
+        try {
+            const history = await this.historyModel.findOne({ idempotencyKey: key }).lean().exec();
+            return ResultEntity.success(history ? HistoryRepositoryMapper.toEntity(history) : null);
+        } catch (error) {
+            this.logError(`Failed to retrieve history checkpoint ${key}`, error);
+            return ResultEntity.failure(ErrorEntity.DatabaseError('Failed to retrieve history checkpoint'));
+        }
+    }
+
     async deactivateByUserId(userId: string): Promise<ResultEntity<void>> {
         try {
             const update = await this.historyModel
