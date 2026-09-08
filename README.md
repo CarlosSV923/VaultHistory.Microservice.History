@@ -1,5 +1,7 @@
 # VaultHistory.Microservice.History
 
+English documentation: [docs/overview.md](docs/overview.md).
+
 Microservicio desarrollado con NestJS para el modulo de historias dentro del sistema VaultHistory.
 
 Este repositorio documenta principalmente aspectos tecnicos del proyecto: arquitectura, ejecucion local, Docker, MongoDB, Mongoose, autenticacion JWT, integracion con Gemini y flujo de pruebas.
