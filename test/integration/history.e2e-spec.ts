@@ -151,6 +151,24 @@ describe('History API integration', () => {
         });
     });
 
+    it('rejects public generation fields that could override the authenticated identity or server-selected type', async () => {
+        const token = createAuthToken({ sub: 'user-a' });
+
+        await api()
+            .post('/api/v1/history/generate/query')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                userId: 'user-b',
+                type: HistoryType.SUBSCRIPTION,
+                idempotencyKey: 'user-b:2026',
+                theme: 'fantasy',
+            })
+            .expect(400);
+
+        expect(aiMock.generateContent).not.toHaveBeenCalled();
+        expect(await historyModel.countDocuments({ userId: 'user-b' })).toBe(0);
+    });
+
     it('returns the mapped AI error when content generation fails', async () => {
         aiMock.generateContent.mockResolvedValueOnce(
             ResultEntity.failure(ErrorEntity.SDKError('Gemini failed')),
@@ -231,6 +249,33 @@ describe('History API integration', () => {
         });
         expect(body.histories[0].id).toEqual(expect.any(String));
         expect(body.histories[0].generateAt).toBeDefined();
+    });
+
+    it('rejects an injected user filter and leaves another user history inaccessible', async () => {
+        await historyModel.insertMany([
+            {
+                userId: 'user-a',
+                content: 'User A history',
+                isActive: true,
+                type: HistoryType.QUERY,
+            },
+            {
+                userId: 'user-b',
+                content: 'User B history',
+                isActive: true,
+                type: HistoryType.QUERY,
+            },
+        ]);
+
+        const token = createAuthToken({ sub: 'user-a' });
+
+        await api()
+            .get('/api/v1/history/list')
+            .query({ userId: 'user-b' })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(400);
+
+        expect(await historyModel.countDocuments({ userId: 'user-b' })).toBe(1);
     });
 
     it('deactivates a history by id for the authenticated owner', async () => {

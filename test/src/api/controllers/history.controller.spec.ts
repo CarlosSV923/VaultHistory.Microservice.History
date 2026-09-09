@@ -102,6 +102,30 @@ describe('HistoryController', () => {
             expect(response.status.mock.calls).toEqual([[400]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
         });
+
+        it('uses the authenticated identity and server-selected type when the controller is invoked directly', async () => {
+            const response = createResponse();
+            const untrustedBody = {
+                userId: 'another-user',
+                type: HistoryType.SUBSCRIPTION,
+                idempotencyKey: 'untrusted-key',
+                theme: 'Adventure',
+            } as unknown as {
+                date?: string;
+                theme?: string;
+                character?: string;
+            };
+
+            generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
+
+            await controller.generateQueryHistory(untrustedBody, user, asExpressResponse(response));
+
+            expect(generateHistoryUseCase.execute).toHaveBeenCalledWith({
+                userId: 'user123',
+                theme: 'Adventure',
+                type: HistoryType.QUERY,
+            });
+        });
     });
 
     describe('generateSubHistory', () => {
@@ -188,6 +212,28 @@ describe('HistoryController', () => {
 
             expect(response.status.mock.calls).toEqual([[500]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
+        });
+
+        it('uses the authenticated identity when the controller is invoked directly', async () => {
+            const response = createResponse();
+            const untrustedFilter = {
+                userId: 'another-user',
+                theme: 'Adventure',
+            } as unknown as {
+                date?: string;
+                theme?: string;
+                character?: string;
+                type?: HistoryType;
+            };
+
+            getHistoriesByFilterUseCase.execute.mockResolvedValue(ResultEntity.success([]));
+
+            await controller.getHistoriesByFilter(untrustedFilter, user, asExpressResponse(response));
+
+            expect(getHistoriesByFilterUseCase.execute).toHaveBeenCalledWith({
+                theme: 'Adventure',
+                userId: 'user123',
+            });
         });
     });
 

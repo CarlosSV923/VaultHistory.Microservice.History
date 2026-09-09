@@ -68,9 +68,14 @@ export class HistoryController {
         @Body() body: GenerateSubHistoryRequestDTO,
         @Res() response: Response,
     ) {
+        const { userId, date, theme, character, idempotencyKey } = body;
         const result = await this.generateHistoryUseCase.execute({
+            userId,
             type: HistoryType.SUBSCRIPTION,
-            ...body,
+            ...(date !== undefined ? { date } : {}),
+            ...(theme !== undefined ? { theme } : {}),
+            ...(character !== undefined ? { character } : {}),
+            ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
         });
 
         if (result.isFailure) {
@@ -87,7 +92,7 @@ export class HistoryController {
     @ApiOperation({ summary: 'Generate a new history based on provided criteria' })
     @ApiCreatedResponse({
         description: 'History generated successfully',
-        type: GenerateQueryHistoryRequestDTO,
+        type: GenerateHistoryResponseDTO,
     })
     @ApiBadRequestResponse({
         description: 'Validation or domain error',
@@ -106,10 +111,13 @@ export class HistoryController {
         @CurrentUser() user: AuthenticatedUser,
         @Res() response: Response,
     ) {
+        const { date, theme, character } = body;
         const result = await this.generateHistoryUseCase.execute({
             userId: user.userId,
             type: HistoryType.QUERY,
-            ...body,
+            ...(date !== undefined ? { date } : {}),
+            ...(theme !== undefined ? { theme } : {}),
+            ...(character !== undefined ? { character } : {}),
         });
 
         if (result.isFailure) {
@@ -141,9 +149,13 @@ export class HistoryController {
         @CurrentUser() user: AuthenticatedUser,
         @Res() response: Response,
     ) {
+        const { date, theme, character, type } = filter;
         const result = await this.getHistoriesByFilterUseCase.execute({
             userId: user.userId,
-            ...filter,
+            ...(date !== undefined ? { date } : {}),
+            ...(theme !== undefined ? { theme } : {}),
+            ...(character !== undefined ? { character } : {}),
+            ...(type !== undefined ? { type } : {}),
         });
 
         if (result.isFailure) {
