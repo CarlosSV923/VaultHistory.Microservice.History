@@ -2,7 +2,7 @@ import { type ResultEntity } from '../../abstractions/result.entity';
 import { type HistoryType } from '../history.type.enum';
 
 export interface GenerateHistoryParams {
-    userId: string;
+    userId?: string;
     type: HistoryType;
     date?: string;
     theme?: string;

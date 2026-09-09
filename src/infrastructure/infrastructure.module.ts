@@ -5,6 +5,12 @@ import { HistoryRepositoryPortToken } from '@domain/histories/ports/history-repo
 import { HistoryRepositoryAdapter } from './repositories/history-repository.adapter';
 import { AIServicePortToken } from '@domain/histories/ports/ai-service.port';
 import { GeminiAdapter } from './services/gemini.adapter';
+import {
+    AnonymousDailyUsage,
+    AnonymousDailyUsageSchema,
+} from './database/anonymous-daily-usage.model';
+import { AnonymousDailyUsageRepositoryPortToken } from '@domain/histories/ports/anonymous-daily-usage-repository.port';
+import { AnonymousDailyUsageRepositoryAdapter } from './repositories/anonymous-daily-usage-repository.adapter';
 
 @Module({
     imports: [
@@ -12,6 +18,10 @@ import { GeminiAdapter } from './services/gemini.adapter';
             {
                 name: History.name,
                 schema: HistorySchema,
+            },
+            {
+                name: AnonymousDailyUsage.name,
+                schema: AnonymousDailyUsageSchema,
             },
         ]),
     ],
@@ -24,6 +34,10 @@ import { GeminiAdapter } from './services/gemini.adapter';
             provide: AIServicePortToken,
             useClass: GeminiAdapter,
         },
+        {
+            provide: AnonymousDailyUsageRepositoryPortToken,
+            useClass: AnonymousDailyUsageRepositoryAdapter,
+        },
     ],
     exports: [
         {
@@ -33,6 +47,10 @@ import { GeminiAdapter } from './services/gemini.adapter';
         {
             provide: AIServicePortToken,
             useClass: GeminiAdapter,
+        },
+        {
+            provide: AnonymousDailyUsageRepositoryPortToken,
+            useClass: AnonymousDailyUsageRepositoryAdapter,
         },
     ],
 })

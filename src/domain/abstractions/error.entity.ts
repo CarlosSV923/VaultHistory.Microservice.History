@@ -7,6 +7,11 @@ export enum ErrorCodes {
     SDKError = 'Error.SDKError',
     None = 'Error.None',
     InternalServerError = 'Error.InternalServerError',
+    AnonymousGenerationDisabled = 'ANONYMOUS_GENERATION_DISABLED',
+    AnonymousDailyLimitExceeded = 'ANONYMOUS_DAILY_LIMIT_EXCEEDED',
+    AnonymousUsageUnavailable = 'ANONYMOUS_USAGE_UNAVAILABLE',
+    AnonymousGenerationUnavailable = 'ANONYMOUS_GENERATION_UNAVAILABLE',
+    AnonymousHistoryPersistenceFailed = 'ANONYMOUS_HISTORY_PERSISTENCE_FAILED',
 }
 
 export class ErrorEntity {
@@ -41,5 +46,25 @@ export class ErrorEntity {
 
     static SDKError(message: string): ErrorEntity {
         return new ErrorEntity(ErrorCodes.SDKError, message);
+    }
+
+    static AnonymousGenerationDisabled(): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AnonymousGenerationDisabled, 'La generación anónima está deshabilitada');
+    }
+
+    static AnonymousDailyLimitExceeded(): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AnonymousDailyLimitExceeded, 'Se alcanzó el cupo diario de generaciones anónimas');
+    }
+
+    static AnonymousUsageUnavailable(): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AnonymousUsageUnavailable, 'No se pudo verificar el cupo anónimo');
+    }
+
+    static AnonymousGenerationUnavailable(): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AnonymousGenerationUnavailable, 'La generación anónima no está disponible');
+    }
+
+    static AnonymousHistoryPersistenceFailed(): ErrorEntity {
+        return new ErrorEntity(ErrorCodes.AnonymousHistoryPersistenceFailed, 'No se pudo guardar la historia anónima');
     }
 }

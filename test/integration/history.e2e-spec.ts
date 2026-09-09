@@ -7,6 +7,10 @@ import { type App } from 'supertest/types';
 import { ErrorCodes, ErrorEntity } from '../../src/domain/abstractions/error.entity';
 import { ResultEntity } from '../../src/domain/abstractions/result.entity';
 import { History, type HistoryDocument } from '../../src/infrastructure/database/history.model';
+import {
+    AnonymousDailyUsage,
+    type AnonymousDailyUsageDocument,
+} from '../../src/infrastructure/database/anonymous-daily-usage.model';
 import { createAuthToken } from './auth.helper';
 import { createIntegrationApp } from './test-app.factory';
 import {
@@ -22,6 +26,14 @@ type ErrorResponseBody = {
     code: ErrorCodes;
     message: string;
 };
+
+type AnonymousUsage = {
+    limit: number;
+    remaining: number;
+    resetAt: string;
+};
+
+type AnonymousHistoryResponseBody = GenerateHistoryResponseBody & { usage: AnonymousUsage };
 
 type HistoryResponseBody = {
     id: string;
@@ -55,6 +67,7 @@ describe('History API integration', () => {
     let app: INestApplication;
     let mongo: MongoMemoryServer;
     let historyModel: Model<HistoryDocument>;
+    let anonymousUsageModel: Model<AnonymousDailyUsageDocument>;
     let aiMock: {
         generateContent: jest.Mock;
     };
@@ -66,10 +79,14 @@ describe('History API integration', () => {
         mongo = setup.mongo;
         aiMock = setup.aiMock;
         historyModel = app.get<Model<HistoryDocument>>(getModelToken(History.name));
+        anonymousUsageModel = app.get<Model<AnonymousDailyUsageDocument>>(
+            getModelToken(AnonymousDailyUsage.name),
+        );
     });
 
     afterEach(async () => {
         await historyModel.deleteMany({});
+        await anonymousUsageModel.deleteMany({});
         jest.clearAllMocks();
         aiMock.generateContent.mockResolvedValue(
             ResultEntity.success('Generated integration history'),
@@ -102,6 +119,89 @@ describe('History API integration', () => {
             theme: 'fantasy',
             type: HistoryType.SUBSCRIPTION,
         });
+    });
+
+    it('generates an anonymous history with the fixed frontend token and does not persist an IP', async () => {
+        const response = await api()
+            .post('/api/v1/history/generate/anonymous')
+            .set('Authorization', 'integration-frontend-token')
+            .send({ ip: '203.0.113.8', theme: 'fantasy' })
+            .expect(201);
+
+        expect(bodyOf<AnonymousHistoryResponseBody>(response)).toMatchObject({
+            history: 'Generated integration history',
+            usage: { limit: 3, remaining: 2 },
+        });
+        expect(aiMock.generateContent).toHaveBeenCalledWith({
+            theme: 'fantasy',
+            type: HistoryType.ANONYMOUS,
+        });
+        const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).lean();
+        expect(saved).toMatchObject({ content: 'Generated integration history', type: HistoryType.ANONYMOUS });
+        expect(saved).not.toHaveProperty('ip');
+        expect(saved?.userId).toBeUndefined();
+    });
+
+    it.each([undefined, 'invalid-frontend-token'])(
+        'rejects anonymous generation with frontend token %p',
+        async (token) => {
+            const requestBuilder = api().post('/api/v1/history/generate/anonymous');
+            if (token) requestBuilder.set('Authorization', token);
+
+            await requestBuilder.send({ ip: '203.0.113.9' }).expect(401);
+            expect(aiMock.generateContent).not.toHaveBeenCalled();
+        },
+    );
+
+    it('rejects anonymous payload fields outside the supported contract before consuming quota', async () => {
+        await api()
+            .post('/api/v1/history/generate/anonymous')
+            .set('Authorization', 'integration-frontend-token')
+            .send({ ip: '203.0.113.9', userId: 'untrusted-user', type: HistoryType.QUERY })
+            .expect(400);
+
+        expect(aiMock.generateContent).not.toHaveBeenCalled();
+        expect(await anonymousUsageModel.countDocuments()).toBe(0);
+    });
+
+    it('shares the quota between IPv4 and IPv4-mapped IPv6 and admits only the configured concurrent requests', async () => {
+        const requests = Array.from({ length: 10 }, (_, index) =>
+            api()
+                .post('/api/v1/history/generate/anonymous')
+                .set('Authorization', 'integration-frontend-token')
+                .send({ ip: index % 2 === 0 ? '198.51.100.27' : '::ffff:198.51.100.27' }),
+        );
+        const responses = await Promise.all(requests);
+        const created = responses.filter((response) => response.status === 201);
+        const exhausted = responses.filter((response) => response.status === 429);
+
+        expect(created).toHaveLength(3);
+        expect(exhausted).toHaveLength(7);
+        expect(exhausted.every((response) => response.headers['retry-after'])).toBe(true);
+        expect(await anonymousUsageModel.find({ ip: '198.51.100.27' }).lean()).toEqual([
+            expect.objectContaining({ used: 3 }),
+        ]);
+        expect(await anonymousUsageModel.collection.indexes()).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ key: { ip: 1, day: 1 }, unique: true }),
+            ]),
+        );
+        expect(await historyModel.countDocuments({ type: HistoryType.ANONYMOUS })).toBe(3);
+    });
+
+    it('keeps consumed anonymous usage when generation or persistence fails', async () => {
+        aiMock.generateContent.mockResolvedValueOnce(ResultEntity.failure(ErrorEntity.SDKError('Gemini failed')));
+        const generationFailure = await api()
+            .post('/api/v1/history/generate/anonymous')
+            .set('Authorization', 'integration-frontend-token')
+            .send({ ip: '203.0.113.10' })
+            .expect(503);
+        expect(bodyOf<ErrorResponseBody>(generationFailure).code).toBe(
+            ErrorCodes.AnonymousGenerationUnavailable,
+        );
+
+        const usageAfterGenerationFailure = await anonymousUsageModel.findOne({ ip: '203.0.113.10' }).lean();
+        expect(usageAfterGenerationFailure?.used).toBe(1);
     });
 
     it.each([undefined, 'invalid-job-token'])(

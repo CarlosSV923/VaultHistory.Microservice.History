@@ -5,6 +5,8 @@ import type { AIServicePort } from '@domain/histories/ports/ai-service.port';
 import { AIServicePortToken, GenerateHistoryParams } from '@domain/histories/ports/ai-service.port';
 import type { HistoryRepositoryPort } from '@domain/histories/ports/history-repository.port';
 import { HistoryRepositoryPortToken } from '@domain/histories/ports/history-repository.port';
+import { ErrorEntity } from '@domain/abstractions/error.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class GenerateHistoryUseCase {
@@ -15,6 +17,14 @@ export class GenerateHistoryUseCase {
         private readonly aiServicePort: AIServicePort,
     ) {}
     async execute(params: GenerateHistoryParams): Promise<ResultEntity<string>> {
+        const hasUserId = typeof params.userId === 'string' && params.userId.length > 0;
+        if (
+            (params.type === HistoryType.ANONYMOUS && hasUserId) ||
+            (params.type !== HistoryType.ANONYMOUS && !hasUserId)
+        ) {
+            return ResultEntity.failure(ErrorEntity.ValidationError('Invalid history owner for its type'));
+        }
+
         if (params.idempotencyKey) {
             const existing = await this.historyRepositoryPort.getByIdempotencyKey(params.idempotencyKey);
             if (existing.isFailure) return ResultEntity.failure(existing.error);

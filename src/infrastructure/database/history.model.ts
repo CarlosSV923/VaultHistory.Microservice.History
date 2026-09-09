@@ -7,8 +7,8 @@ import {
 
 @Schema()
 export class History {
-    @Prop({ required: true })
-    userId!: string;
+    @Prop({ required: function (this: History) { return this.type !== HistoryType.ANONYMOUS; } })
+    userId?: string;
 
     @Prop({ type: String, required: true, enum: Object.values(HistoryType) })
     type!: HistoryTypeValue;

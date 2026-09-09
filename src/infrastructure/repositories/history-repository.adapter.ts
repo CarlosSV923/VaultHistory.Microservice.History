@@ -31,11 +31,11 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
 
             const result = await history.save();
             this.logger.log(
-                `User ${entity.userId} - History saved successfully - Id: ${result._id.toHexString()}`,
+                `${entity.userId ? `User ${entity.userId}` : 'Anonymous'} - History saved successfully - Id: ${result._id.toHexString()}`,
             );
             return ResultEntity.success();
         } catch (error) {
-            const baseMessage = `User ${entity.userId} - Failed to save history`;
+            const baseMessage = `${entity.userId ? `User ${entity.userId}` : 'Anonymous'} - Failed to save history`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
