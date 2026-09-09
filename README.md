@@ -112,6 +112,8 @@ Los endpoints de consulta y administracion requieren un JWT valido mediante
 requiere que el valor exacto del header `Authorization` sea igual a `AUTH_TOKEN_JOB`.
 `POST /api/v1/history/generate/anonymous` requiere el valor fijo `AUTH_TOKEN_FORNT`; no usa JWT ni la IP de la conexión. El cuerpo debe incluir una única IP válida y el servicio aplica el cupo diario UTC `ANONYMOUS_DAILY_LIMIT` (por defecto, `3`).
 
+La respuesta anónima incorpora `usage.limit`, `usage.remaining` y `usage.resetAt`. Un intento admitido conserva su consumo si Gemini falla, vence el timeout o falla el guardado. Al agotarse se responde `429`, `ANONYMOUS_DAILY_LIMIT_EXCEEDED` y `Retry-After`. El futuro frontend debe comunicar “3 intentos diarios por IP declarada” con el límite configurado: la IP es manipulable, puede ser compartida y cambiarla puede renovar el cupo; no es una protección robusta contra abuso. No existe biblioteca ni recuperación de historias anónimas desde el backend; el frontend puede copiar el resultado o guardarlo localmente.
+
 ## Domain-Driven Design
 
 El proyecto aplica conceptos de Domain-Driven Design para mantener el dominio aislado y expresivo.
