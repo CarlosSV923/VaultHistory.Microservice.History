@@ -8,11 +8,18 @@ export interface GetHistoryFilter {
     theme?: string;
     character?: string;
     type?: HistoryType;
+    page: number;
+    pageSize: number;
+}
+
+export interface HistoryPage {
+    histories: HistoryEntity[];
+    total: number;
 }
 
 export interface HistoryRepositoryPort {
     saveHistory(entity: HistoryEntity): Promise<ResultEntity<void>>;
-    getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>>;
+    getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryPage>>;
     getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>>;
     deactivateByUserId(userId: string): Promise<ResultEntity<void>>;
     deactivateById(id: string, userId: string): Promise<ResultEntity<void>>;

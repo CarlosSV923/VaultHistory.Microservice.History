@@ -52,5 +52,12 @@ describe('History Model', () => {
             expect(paths.theme.isRequired).toBe(false);
             expect(paths.character.isRequired).toBe(false);
         });
+
+        it('indexes active histories by owner and deterministic list order', () => {
+            expect(HistorySchema.indexes()).toContainEqual([
+                { userId: 1, isActive: 1, generateAt: -1, _id: -1 },
+                {},
+            ]);
+        });
     });
 });

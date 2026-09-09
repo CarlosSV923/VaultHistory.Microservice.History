@@ -38,3 +38,5 @@ export class History {
 export type HistoryDocument = HydratedDocument<History>;
 
 export const HistorySchema = SchemaFactory.createForClass(History);
+
+HistorySchema.index({ userId: 1, isActive: 1, generateAt: -1, _id: -1 });

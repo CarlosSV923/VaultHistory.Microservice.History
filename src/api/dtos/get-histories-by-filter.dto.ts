@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDateString, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { HistoryResponseDTO } from './history-response.dto';
 import {
@@ -19,7 +20,7 @@ export class GetHistoriesByFilterRequestDTO {
         example: '1999-12-31',
         description: 'Date used to filter the histories',
     })
-    @IsString()
+    @IsDateString()
     @IsOptional()
     date?: string;
 
@@ -27,6 +28,7 @@ export class GetHistoriesByFilterRequestDTO {
         example: 'medieval fantasy',
         description: 'Theme used to filter the histories',
     })
+    @IsString()
     @IsOptional()
     theme?: string;
 
@@ -37,6 +39,46 @@ export class GetHistoriesByFilterRequestDTO {
     @IsString()
     @IsOptional()
     character?: string;
+
+    @ApiPropertyOptional({
+        minimum: 1,
+        default: 1,
+        example: 1,
+        description: 'One-based page number',
+    })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @IsOptional()
+    page?: number;
+
+    @ApiPropertyOptional({
+        minimum: 1,
+        maximum: 100,
+        default: 20,
+        example: 20,
+        description: 'Maximum number of histories returned per page',
+    })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    @IsOptional()
+    pageSize?: number;
+}
+
+export class HistoryPaginationMetaDTO {
+    @ApiProperty({ example: 1 })
+    page!: number;
+
+    @ApiProperty({ example: 20 })
+    pageSize!: number;
+
+    @ApiProperty({ example: 37 })
+    total!: number;
+
+    @ApiProperty({ example: 2 })
+    totalPages!: number;
 }
 
 export class GetHistoriesByFilterResponseDTO {
@@ -55,4 +97,7 @@ export class GetHistoriesByFilterResponseDTO {
         ],
     })
     histories!: HistoryResponseDTO[];
+
+    @ApiProperty({ type: HistoryPaginationMetaDTO })
+    meta!: HistoryPaginationMetaDTO;
 }
