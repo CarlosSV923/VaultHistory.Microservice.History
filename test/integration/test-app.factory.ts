@@ -43,7 +43,12 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
 
     const app = moduleRef.createNestApplication();
 
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+        }),
+    );
     app.setGlobalPrefix('api');
     app.enableVersioning({
         type: VersioningType.URI,
