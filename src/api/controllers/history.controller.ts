@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query, Res, Patch, Param, UseGuards } from
 import type { Response } from 'express';
 import {
     GenerateHistoryUseCase,
+    GenerateAnonymousHistoryUseCase,
     DeactivateHistoriesByUserIdUseCase,
     DeactivateHistoryByIdUseCase,
     GetHistoriesByFilterUseCase,
@@ -10,6 +11,8 @@ import {
     GenerateSubHistoryRequestDTO,
     GenerateQueryHistoryRequestDTO,
     GenerateHistoryResponseDTO,
+    GenerateAnonymousHistoryRequestDTO,
+    GenerateAnonymousHistoryResponseDTO,
     GetHistoriesByFilterRequestDTO,
     GetHistoriesByFilterResponseDTO,
 } from '../dtos';
@@ -26,10 +29,14 @@ import {
     ApiOkResponse,
     ApiOperation,
     ApiUnauthorizedResponse,
+    ApiHeader,
+    ApiServiceUnavailableResponse,
+    ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { JwtAuthGuard } from '@api/auth/jwt-auth.guard';
 import { JobTokenAuthGuard } from '@api/auth/job-token-auth.guard';
+import { FrontendTokenAuthGuard } from '@api/auth/frontend-token-auth.guard';
 import type { AuthenticatedUser } from '@api/auth/authenticated-user';
 import { CurrentUser } from '@api/auth/current-user.decorator';
 import { DeactivateHistoriesByUserIdResponseDTO } from '@api/dtos/deactivate-histories-by-user.dto';
@@ -43,7 +50,43 @@ export class HistoryController {
         private readonly getHistoriesByFilterUseCase: GetHistoriesByFilterUseCase,
         private readonly deactivateHistoryByIdUseCase: DeactivateHistoryByIdUseCase,
         private readonly deactivateHistoriesByUserIdUseCase: DeactivateHistoriesByUserIdUseCase,
+        private readonly generateAnonymousHistoryUseCase: GenerateAnonymousHistoryUseCase,
     ) {}
+
+    @UseGuards(FrontendTokenAuthGuard)
+    @Post('generate/anonymous')
+    @ApiOperation({ summary: 'Generate an anonymous history subject to a daily IP quota' })
+    @ApiHeader({
+        name: 'Authorization',
+        required: true,
+        description: 'Fixed frontend token configured through AUTH_TOKEN_FORNT',
+    })
+    @ApiCreatedResponse({
+        description: 'Anonymous history generated successfully',
+        type: GenerateAnonymousHistoryResponseDTO,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid anonymous generation payload', type: ErrorEntity })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized - invalid or missing frontend token', type: ErrorEntity })
+    @ApiTooManyRequestsResponse({ description: 'Anonymous daily quota exceeded', type: ErrorEntity })
+    @ApiServiceUnavailableResponse({ description: 'Anonymous generation unavailable', type: ErrorEntity })
+    async generateAnonymousHistory(
+        @Body() body: GenerateAnonymousHistoryRequestDTO,
+        @Res() response: Response,
+    ) {
+        const result = await this.generateAnonymousHistoryUseCase.execute(body);
+
+        if (!result.isSuccess) {
+            const status = ErrorCodeMapper.toHttpStatusCode(result.error.code);
+            if (status === 429 && result.usage) {
+                const retryAfter = Math.max(1, Math.ceil((Date.parse(result.usage.resetAt) - Date.now()) / 1000));
+                response.setHeader('Retry-After', retryAfter.toString());
+            }
+            response.status(status).json({ ...result.error, ...(result.usage ? { usage: result.usage } : {}) });
+            return;
+        }
+
+        response.status(201).json({ history: result.history, usage: result.usage });
+    }
 
     @UseGuards(JobTokenAuthGuard)
     @Post('generate/subscription')

@@ -13,10 +13,10 @@ describe('History Model', () => {
             expect(HistorySchema).toBeDefined();
         });
 
-        it('should have userId field as required', () => {
+        it('requires userId for owned histories and allows it to be absent for anonymous histories', () => {
             const paths = HistorySchema.paths;
             expect(paths.userId).toBeDefined();
-            expect(paths.userId.isRequired).toBe(true);
+            expect(paths.userId.options.required).toEqual(expect.any(Function));
         });
 
         it('should have content field as required', () => {
