@@ -166,7 +166,9 @@ describe('HistoryController', () => {
                 type: HistoryType.SUBSCRIPTION,
             });
 
-            getHistoriesByFilterUseCase.execute.mockResolvedValue(ResultEntity.success([history]));
+            getHistoriesByFilterUseCase.execute.mockResolvedValue(
+                ResultEntity.success({ histories: [history], total: 21 }),
+            );
 
             await controller.getHistoriesByFilter(
                 { theme: 'Adventure' },
@@ -179,6 +181,8 @@ describe('HistoryController', () => {
                     {
                         userId: 'user123',
                         theme: 'Adventure',
+                        page: 1,
+                        pageSize: 20,
                     },
                 ],
             ]);
@@ -197,6 +201,12 @@ describe('HistoryController', () => {
                                 generateAt,
                             },
                         ],
+                        meta: {
+                            page: 1,
+                            pageSize: 20,
+                            total: 21,
+                            totalPages: 2,
+                        },
                     },
                 ],
             ]);
@@ -226,13 +236,17 @@ describe('HistoryController', () => {
                 type?: HistoryType;
             };
 
-            getHistoriesByFilterUseCase.execute.mockResolvedValue(ResultEntity.success([]));
+            getHistoriesByFilterUseCase.execute.mockResolvedValue(
+                ResultEntity.success({ histories: [], total: 0 }),
+            );
 
             await controller.getHistoriesByFilter(untrustedFilter, user, asExpressResponse(response));
 
             expect(getHistoriesByFilterUseCase.execute).toHaveBeenCalledWith({
                 theme: 'Adventure',
                 userId: 'user123',
+                page: 1,
+                pageSize: 20,
             });
         });
     });

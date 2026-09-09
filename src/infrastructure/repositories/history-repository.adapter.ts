@@ -4,6 +4,7 @@ import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
 import {
     GetHistoryFilter,
+    HistoryPage,
     HistoryRepositoryPort,
 } from '@domain/histories/ports/history-repository.port';
 import { History, HistoryDocument } from '../database/history.model';
@@ -41,17 +42,25 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
         }
     }
 
-    async getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>> {
+    async getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryPage>> {
         try {
-            const histories = await this.historyModel
-                .find({ ...filter, isActive: true })
-                .lean()
-                .exec();
+            const { page, pageSize, ...criteria } = filter;
+            const query = { ...criteria, isActive: true };
+            const [histories, total] = await Promise.all([
+                this.historyModel
+                    .find(query)
+                    .sort({ generateAt: -1, _id: -1 })
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .lean()
+                    .exec(),
+                this.historyModel.countDocuments(query).exec(),
+            ]);
             const historyEntities = histories.map((history) =>
                 HistoryRepositoryMapper.toEntity(history),
             );
-            this.logger.log(`Retrieved ${historyEntities.length} histories successfully`);
-            return ResultEntity.success(historyEntities);
+            this.logger.log(`Retrieved ${historyEntities.length} histories from page ${page} successfully`);
+            return ResultEntity.success({ histories: historyEntities, total });
         } catch (error) {
             const baseMessage = `User ${filter.userId} - Failed to retrieve histories`;
 

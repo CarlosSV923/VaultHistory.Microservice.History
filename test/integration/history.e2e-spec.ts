@@ -35,6 +35,12 @@ type HistoryResponseBody = {
 
 type GetHistoriesResponseBody = {
     histories: HistoryResponseBody[];
+    meta: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+    };
 };
 
 type MessageResponseBody = {
@@ -249,6 +255,80 @@ describe('History API integration', () => {
         });
         expect(body.histories[0].id).toEqual(expect.any(String));
         expect(body.histories[0].generateAt).toBeDefined();
+        expect(body.meta).toEqual({ page: 1, pageSize: 20, total: 1, totalPages: 1 });
+    });
+
+    it('paginates histories in deterministic generated-date and id order without crossing owners', async () => {
+        const generatedAt = new Date('2026-09-08T12:00:00.000Z');
+        const otherOwner = await historyModel.create({
+            userId: 'other-user',
+            content: 'Other owner',
+            isActive: true,
+            type: HistoryType.QUERY,
+            generateAt: generatedAt,
+        });
+        const first = await historyModel.create({
+            userId: 'user-123',
+            content: 'First',
+            isActive: true,
+            type: HistoryType.QUERY,
+            generateAt: generatedAt,
+        });
+        const second = await historyModel.create({
+            userId: 'user-123',
+            content: 'Second',
+            isActive: true,
+            type: HistoryType.QUERY,
+            generateAt: generatedAt,
+        });
+        const newest = await historyModel.create({
+            userId: 'user-123',
+            content: 'Newest',
+            isActive: true,
+            type: HistoryType.QUERY,
+            generateAt: new Date('2026-09-08T12:01:00.000Z'),
+        });
+
+        const token = createAuthToken({ sub: 'user-123' });
+        const firstPage = await api()
+            .get('/api/v1/history/list')
+            .query({ page: 1, pageSize: 2 })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+        const secondPage = await api()
+            .get('/api/v1/history/list')
+            .query({ page: 2, pageSize: 2 })
+            .set('Authorization', `Bearer ${token}`)
+            .expect(200);
+
+        const firstBody = bodyOf<GetHistoriesResponseBody>(firstPage);
+        const secondBody = bodyOf<GetHistoriesResponseBody>(secondPage);
+        const expectedSameDateOrder = [first, second]
+            .sort((left, right) => right._id.toHexString().localeCompare(left._id.toHexString()))
+            .map((history) => history._id.toHexString());
+
+        expect(firstBody.histories.map((history) => history.id)).toEqual([
+            newest._id.toHexString(),
+            expectedSameDateOrder[0],
+        ]);
+        expect(secondBody.histories.map((history) => history.id)).toEqual([expectedSameDateOrder[1]]);
+        expect(firstBody.meta).toEqual({ page: 1, pageSize: 2, total: 3, totalPages: 2 });
+        expect(secondBody.meta).toEqual({ page: 2, pageSize: 2, total: 3, totalPages: 2 });
+        expect(firstBody.histories.some((history) => history.id === otherOwner._id.toHexString())).toBe(false);
+    });
+
+    it.each([
+        { page: 0, pageSize: 20 },
+        { page: 1, pageSize: 101 },
+        { page: 'not-a-number', pageSize: 20 },
+    ])('rejects an invalid pagination query %o', async (query) => {
+        const token = createAuthToken({ sub: 'user-123' });
+
+        await api()
+            .get('/api/v1/history/list')
+            .query(query)
+            .set('Authorization', `Bearer ${token}`)
+            .expect(400);
     });
 
     it('rejects an injected user filter and leaves another user history inaccessible', async () => {

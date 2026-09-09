@@ -136,6 +136,10 @@ export class HistoryController {
         description: 'Histories found',
         type: GetHistoriesByFilterResponseDTO,
     })
+    @ApiBadRequestResponse({
+        description: 'Invalid filters or pagination parameters',
+        type: ErrorEntity,
+    })
     @ApiInternalServerErrorResponse({
         description: 'Unhandled server error',
         type: ErrorEntity,
@@ -149,13 +153,15 @@ export class HistoryController {
         @CurrentUser() user: AuthenticatedUser,
         @Res() response: Response,
     ) {
-        const { date, theme, character, type } = filter;
+        const { date, theme, character, type, page = 1, pageSize = 20 } = filter;
         const result = await this.getHistoriesByFilterUseCase.execute({
             userId: user.userId,
             ...(date !== undefined ? { date } : {}),
             ...(theme !== undefined ? { theme } : {}),
             ...(character !== undefined ? { character } : {}),
             ...(type !== undefined ? { type } : {}),
+            page,
+            pageSize,
         });
 
         if (result.isFailure) {
@@ -165,7 +171,7 @@ export class HistoryController {
         }
 
         response.status(200).json({
-            histories: result.Value.map((history) => ({
+            histories: result.Value.histories.map((history) => ({
                 id: history.id,
                 content: history.content,
                 type: history.type,
@@ -174,6 +180,12 @@ export class HistoryController {
                 character: history.character,
                 generateAt: history.generateAt,
             })),
+            meta: {
+                page,
+                pageSize,
+                total: result.Value.total,
+                totalPages: Math.ceil(result.Value.total / pageSize),
+            },
         });
     }
 
