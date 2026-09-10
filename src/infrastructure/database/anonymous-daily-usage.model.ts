@@ -4,7 +4,7 @@ import { HydratedDocument } from 'mongoose';
 @Schema({ collection: 'anonymous_daily_usage' })
 export class AnonymousDailyUsage {
     @Prop({ type: String, required: true })
-    ip!: string;
+    anonymousVisitorKey!: string;
 
     @Prop({ type: String, required: true })
     day!: string;
@@ -16,4 +16,4 @@ export class AnonymousDailyUsage {
 export type AnonymousDailyUsageDocument = HydratedDocument<AnonymousDailyUsage>;
 
 export const AnonymousDailyUsageSchema = SchemaFactory.createForClass(AnonymousDailyUsage);
-AnonymousDailyUsageSchema.index({ ip: 1, day: 1 }, { unique: true });
+AnonymousDailyUsageSchema.index({ anonymousVisitorKey: 1, day: 1 }, { unique: true });

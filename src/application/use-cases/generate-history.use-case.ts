@@ -18,9 +18,11 @@ export class GenerateHistoryUseCase {
     ) {}
     async execute(params: GenerateHistoryParams): Promise<ResultEntity<string>> {
         const hasUserId = typeof params.userId === 'string' && params.userId.length > 0;
+        const hasAnonymousVisitorKey =
+            typeof params.anonymousVisitorKey === 'string' && params.anonymousVisitorKey.length > 0;
         if (
-            (params.type === HistoryType.ANONYMOUS && hasUserId) ||
-            (params.type !== HistoryType.ANONYMOUS && !hasUserId)
+            (params.type === HistoryType.ANONYMOUS && (hasUserId || !hasAnonymousVisitorKey)) ||
+            (params.type !== HistoryType.ANONYMOUS && (!hasUserId || hasAnonymousVisitorKey))
         ) {
             return ResultEntity.failure(ErrorEntity.ValidationError('Invalid history owner for its type'));
         }
@@ -30,7 +32,8 @@ export class GenerateHistoryUseCase {
             if (existing.isFailure) return ResultEntity.failure(existing.error);
             if (existing.Value) return ResultEntity.success(existing.Value.content);
         }
-        const contentResult = await this.aiServicePort.generateContent(params);
+        const { anonymousVisitorKey, ...generationParams } = params;
+        const contentResult = await this.aiServicePort.generateContent(generationParams);
 
         if (contentResult.isFailure) {
             return ResultEntity.failure(contentResult.error);
@@ -38,6 +41,7 @@ export class GenerateHistoryUseCase {
 
         const newHistory = HistoryEntity.create({
             userId: params.userId,
+            anonymousVisitorKey,
             content: contentResult.Value,
             date: params.date,
             theme: params.theme,

@@ -2,6 +2,7 @@ import type { HistoryType } from './history.type.enum';
 
 export type CreateHistoryParams = {
     userId?: string;
+    anonymousVisitorKey?: string;
     content: string;
     date?: string;
     theme?: string;
@@ -13,6 +14,7 @@ export type CreateHistoryParams = {
 export type RestoreHistoryParams = {
     id: string;
     userId?: string;
+    anonymousVisitorKey?: string;
     content: string;
     date?: string;
     theme?: string;
@@ -27,6 +29,7 @@ export class HistoryEntity {
     private constructor(
         private readonly _id: string | null,
         private readonly _userId: string | undefined,
+        private readonly _anonymousVisitorKey: string | undefined,
         private readonly _content: string,
         private readonly _date: string | undefined,
         private readonly _theme: string | undefined,
@@ -41,6 +44,7 @@ export class HistoryEntity {
         return new HistoryEntity(
             null,
             params.userId,
+            params.anonymousVisitorKey,
             params.content,
             params.date,
             params.theme,
@@ -56,6 +60,7 @@ export class HistoryEntity {
         return new HistoryEntity(
             params.id,
             params.userId,
+            params.anonymousVisitorKey,
             params.content,
             params.date,
             params.theme,
@@ -73,6 +78,10 @@ export class HistoryEntity {
 
     get userId(): string | undefined {
         return this._userId;
+    }
+
+    get anonymousVisitorKey(): string | undefined {
+        return this._anonymousVisitorKey;
     }
 
     get content(): string {

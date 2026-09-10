@@ -125,7 +125,8 @@ describe('History API integration', () => {
         const response = await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
-            .send({ ip: '203.0.113.8', theme: 'fantasy' })
+            .set('X-Forwarded-For', '203.0.113.8')
+            .send({ theme: 'fantasy' })
             .expect(201);
 
         expect(bodyOf<AnonymousHistoryResponseBody>(response)).toMatchObject({
@@ -136,9 +137,10 @@ describe('History API integration', () => {
             theme: 'fantasy',
             type: HistoryType.ANONYMOUS,
         });
-        const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).lean();
+        const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).select('+anonymousVisitorKey').lean();
         expect(saved).toMatchObject({ content: 'Generated integration history', type: HistoryType.ANONYMOUS });
         expect(saved).not.toHaveProperty('ip');
+        expect(saved?.anonymousVisitorKey).toMatch(/^v1:/);
         expect(saved?.userId).toBeUndefined();
     });
 
@@ -148,7 +150,7 @@ describe('History API integration', () => {
             const requestBuilder = api().post('/api/v1/history/generate/anonymous');
             if (token) requestBuilder.set('Authorization', token);
 
-            await requestBuilder.send({ ip: '203.0.113.9' }).expect(401);
+            await requestBuilder.set('X-Forwarded-For', '203.0.113.9').send({}).expect(401);
             expect(aiMock.generateContent).not.toHaveBeenCalled();
         },
     );
@@ -157,6 +159,7 @@ describe('History API integration', () => {
         await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
+            .set('X-Forwarded-For', '203.0.113.9')
             .send({ ip: '203.0.113.9', userId: 'untrusted-user', type: HistoryType.QUERY })
             .expect(400);
 
@@ -169,7 +172,8 @@ describe('History API integration', () => {
             api()
                 .post('/api/v1/history/generate/anonymous')
                 .set('Authorization', 'integration-frontend-token')
-                .send({ ip: index % 2 === 0 ? '198.51.100.27' : '::ffff:198.51.100.27' }),
+                .set('X-Forwarded-For', index % 2 === 0 ? '198.51.100.27' : '::ffff:198.51.100.27')
+                .send({}),
         );
         const responses = await Promise.all(requests);
         const created = responses.filter((response) => response.status === 201);
@@ -178,12 +182,10 @@ describe('History API integration', () => {
         expect(created).toHaveLength(3);
         expect(exhausted).toHaveLength(7);
         expect(exhausted.every((response) => response.headers['retry-after'])).toBe(true);
-        expect(await anonymousUsageModel.find({ ip: '198.51.100.27' }).lean()).toEqual([
-            expect.objectContaining({ used: 3 }),
-        ]);
+        expect(await anonymousUsageModel.find({}).lean()).toEqual([expect.objectContaining({ used: 3 })]);
         expect(await anonymousUsageModel.collection.indexes()).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ key: { ip: 1, day: 1 }, unique: true }),
+                expect.objectContaining({ key: { anonymousVisitorKey: 1, day: 1 }, unique: true }),
             ]),
         );
         expect(await historyModel.countDocuments({ type: HistoryType.ANONYMOUS })).toBe(3);
@@ -194,13 +196,14 @@ describe('History API integration', () => {
         const generationFailure = await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
-            .send({ ip: '203.0.113.10' })
+            .set('X-Forwarded-For', '203.0.113.10')
+            .send({})
             .expect(503);
         expect(bodyOf<ErrorResponseBody>(generationFailure).code).toBe(
             ErrorCodes.AnonymousGenerationUnavailable,
         );
 
-        const usageAfterGenerationFailure = await anonymousUsageModel.findOne({ ip: '203.0.113.10' }).lean();
+        const usageAfterGenerationFailure = await anonymousUsageModel.findOne({}).lean();
         expect(usageAfterGenerationFailure?.used).toBe(1);
     });
 

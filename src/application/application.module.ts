@@ -4,10 +4,12 @@ import {
     DeactivateHistoryByIdUseCase,
     GenerateHistoryUseCase,
     GenerateAnonymousHistoryUseCase,
+    GetAnonymousHistoriesUseCase,
     GetHistoriesByFilterUseCase,
 } from './use-cases';
 import { InfrastructureModule } from '@infrastructure/infrastructure.module';
 import { AnonymousGenerationConfig } from './anonymous-generation.config';
+import { AnonymousVisitorKeyService } from './anonymous-visitor-key.service';
 import {
     AnonymousGenerationClockToken,
     SystemAnonymousGenerationClock,
@@ -18,6 +20,7 @@ import {
     exports: [
         GenerateHistoryUseCase,
         GenerateAnonymousHistoryUseCase,
+        GetAnonymousHistoriesUseCase,
         GetHistoriesByFilterUseCase,
         DeactivateHistoryByIdUseCase,
         DeactivateHistoriesByUserIdUseCase,
@@ -25,10 +28,12 @@ import {
     providers: [
         GenerateHistoryUseCase,
         GenerateAnonymousHistoryUseCase,
+        GetAnonymousHistoriesUseCase,
         GetHistoriesByFilterUseCase,
         DeactivateHistoryByIdUseCase,
         DeactivateHistoriesByUserIdUseCase,
         AnonymousGenerationConfig,
+        AnonymousVisitorKeyService,
         {
             provide: AnonymousGenerationClockToken,
             useClass: SystemAnonymousGenerationClock,

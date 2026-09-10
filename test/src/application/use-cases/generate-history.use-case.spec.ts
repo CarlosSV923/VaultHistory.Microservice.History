@@ -19,6 +19,7 @@ describe('GenerateHistoryUseCase', () => {
         mockHistoryRepository = {
             saveHistory: jest.fn(),
             getHistoriesByFilter: jest.fn(),
+            getAnonymousHistoriesByFilter: jest.fn(),
             getByIdempotencyKey: jest.fn().mockResolvedValue(ResultEntity.success(null)),
             deactivateByUserId: jest.fn(),
             deactivateById: jest.fn(),

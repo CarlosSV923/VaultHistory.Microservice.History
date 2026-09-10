@@ -10,6 +10,9 @@ export class History {
     @Prop({ required: function (this: History) { return this.type !== HistoryType.ANONYMOUS; } })
     userId?: string;
 
+    @Prop({ required: false, select: false })
+    anonymousVisitorKey?: string;
+
     @Prop({ type: String, required: true, enum: Object.values(HistoryType) })
     type!: HistoryTypeValue;
 
@@ -40,3 +43,4 @@ export type HistoryDocument = HydratedDocument<History>;
 export const HistorySchema = SchemaFactory.createForClass(History);
 
 HistorySchema.index({ userId: 1, isActive: 1, generateAt: -1, _id: -1 });
+HistorySchema.index({ type: 1, anonymousVisitorKey: 1, isActive: 1, generateAt: -1, _id: -1 });

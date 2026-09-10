@@ -12,6 +12,12 @@ export interface GetHistoryFilter {
     pageSize: number;
 }
 
+export interface GetAnonymousHistoryFilter {
+    anonymousVisitorKeys: string[];
+    page: number;
+    pageSize: number;
+}
+
 export interface HistoryPage {
     histories: HistoryEntity[];
     total: number;
@@ -20,6 +26,7 @@ export interface HistoryPage {
 export interface HistoryRepositoryPort {
     saveHistory(entity: HistoryEntity): Promise<ResultEntity<void>>;
     getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryPage>>;
+    getAnonymousHistoriesByFilter(filter: GetAnonymousHistoryFilter): Promise<ResultEntity<HistoryPage>>;
     getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>>;
     deactivateByUserId(userId: string): Promise<ResultEntity<void>>;
     deactivateById(id: string, userId: string): Promise<ResultEntity<void>>;

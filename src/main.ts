@@ -7,6 +7,16 @@ async function bootstrap() {
     const logger = new Logger('Bootstrap');
     const app = await NestFactory.create(AppModule);
 
+    const configuredTrustedProxyHops = process.env.TRUSTED_PROXY_HOPS ?? '0';
+    if (!/^(0|[1-9]\d*)$/.test(configuredTrustedProxyHops)) {
+        throw new Error('TRUSTED_PROXY_HOPS must be a safe integer greater than or equal to 0');
+    }
+    const trustedProxyHops = Number(configuredTrustedProxyHops);
+    if (!Number.isSafeInteger(trustedProxyHops)) {
+        throw new Error('TRUSTED_PROXY_HOPS must be a safe integer greater than or equal to 0');
+    }
+    app.getHttpAdapter().getInstance().set('trust proxy', trustedProxyHops);
+
     app.enableShutdownHooks();
     app.useGlobalPipes(
         new ValidationPipe({

@@ -12,6 +12,7 @@ describe('GetHistoriesByFilterUseCase', () => {
         mockHistoryRepository = {
             saveHistory: jest.fn(),
             getHistoriesByFilter: jest.fn(),
+            getAnonymousHistoriesByFilter: jest.fn(),
             deactivateByUserId: jest.fn(),
             deactivateById: jest.fn(),
         };

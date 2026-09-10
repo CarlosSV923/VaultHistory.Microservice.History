@@ -103,6 +103,7 @@ POST  /api/v1/history/generate/subscription
 POST  /api/v1/history/generate/query
 POST  /api/v1/history/generate/anonymous
 GET   /api/v1/history/list
+GET   /api/v1/history/list/anonymous
 PATCH /api/v1/history/deactivate-by-id/:id
 PATCH /api/v1/history/deactivate-by-user
 ```
@@ -110,9 +111,9 @@ PATCH /api/v1/history/deactivate-by-user
 Los endpoints de consulta y administracion requieren un JWT valido mediante
 `Authorization: Bearer <token>`. El endpoint `POST /api/v1/history/generate/subscription`
 requiere que el valor exacto del header `Authorization` sea igual a `AUTH_TOKEN_JOB`.
-`POST /api/v1/history/generate/anonymous` requiere el valor fijo `AUTH_TOKEN_FORNT`; no usa JWT ni la IP de la conexión. El cuerpo debe incluir una única IP válida y el servicio aplica el cupo diario UTC `ANONYMOUS_DAILY_LIMIT` (por defecto, `3`).
+`POST /api/v1/history/generate/anonymous` y `GET /api/v1/history/list/anonymous` requieren el valor fijo `AUTH_TOKEN_FORNT`; no usan JWT. La IP nunca viaja en el cuerpo ni en los parámetros: el servicio la resuelve desde la conexión o desde el proxy de confianza configurado con `TRUSTED_PROXY_HOPS`. Ambos endpoints deben consumirse desde un BFF o proxy que controle ese header.
 
-La respuesta anónima incorpora `usage.limit`, `usage.remaining` y `usage.resetAt`. Un intento admitido conserva su consumo si Gemini falla, vence el timeout o falla el guardado. Al agotarse se responde `429`, `ANONYMOUS_DAILY_LIMIT_EXCEEDED` y `Retry-After`. El futuro frontend debe comunicar “3 intentos diarios por IP declarada” con el límite configurado: la IP es manipulable, puede ser compartida y cambiarla puede renovar el cupo; no es una protección robusta contra abuso. No existe biblioteca ni recuperación de historias anónimas desde el backend; el frontend puede copiar el resultado o guardarlo localmente.
+La respuesta anónima incorpora `usage.limit`, `usage.remaining` y `usage.resetAt`. Un intento admitido conserva su consumo si Gemini falla, vence el timeout o falla el guardado. Al agotarse se responde `429`, `ANONYMOUS_DAILY_LIMIT_EXCEEDED` y `Retry-After`. Las historias se asocian mediante un HMAC de la IP normalizada, por lo que `GET /list/anonymous` solo devuelve las del visitante resuelto por el servidor. Configure `ANONYMOUS_VISITOR_HMAC_KEYS` como `v2:secreto-nuevo,v1:secreto-anterior` para rotar el secreto sin perder acceso a las historias existentes.
 
 ## Domain-Driven Design
 
@@ -251,7 +252,7 @@ isActive
 generateAt
 ```
 
-La colección `histories` almacena historias generadas para un usuario y, para el tipo `anonymous`, no contiene `userId` ni la IP de origen. La colección `anonymous_daily_usage` conserva únicamente la IP normalizada, el día UTC y el contador para aplicar el cupo de forma atómica. Las eliminaciones funcionales se manejan mediante `isActive=false`, por lo que las consultas de listado retornan solo historias activas del usuario autenticado.
+La colección `histories` almacena historias generadas para un usuario y, para el tipo `anonymous`, no contiene `userId` ni la IP de origen: guarda una clave HMAC versionada. La colección `anonymous_daily_usage` usa esa misma clave, el día UTC y el contador para aplicar el cupo de forma atómica. Las eliminaciones funcionales se manejan mediante `isActive=false`; los listados devuelven solo historias activas del usuario o visitante correspondiente.
 
 ## Flujo Recomendado Para Cambios De Base De Datos
 

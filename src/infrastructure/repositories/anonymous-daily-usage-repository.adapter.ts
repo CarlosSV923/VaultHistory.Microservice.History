@@ -28,15 +28,15 @@ export class AnonymousDailyUsageRepositoryAdapter
     }
 
     async consume(
-        ip: string,
+        anonymousVisitorKey: string,
         day: string,
         limit: number,
     ): Promise<ResultEntity<AnonymousUsageConsumption>> {
         try {
             try {
                 await this.usageModel.updateOne(
-                    { ip, day },
-                    { $setOnInsert: { ip, day, used: 0 } },
+                    { anonymousVisitorKey, day },
+                    { $setOnInsert: { anonymousVisitorKey, day, used: 0 } },
                     { upsert: true },
                 ).exec();
             } catch (error) {
@@ -47,7 +47,7 @@ export class AnonymousDailyUsageRepositoryAdapter
 
             const usage = await this.usageModel
                 .findOneAndUpdate(
-                    { ip, day, used: { $lt: limit } },
+                    { anonymousVisitorKey, day, used: { $lt: limit } },
                     { $inc: { used: 1 } },
                     { returnDocument: 'after' },
                 )
@@ -57,7 +57,7 @@ export class AnonymousDailyUsageRepositoryAdapter
             return ResultEntity.success(usage ? { used: usage.used, allowed: true } : { used: limit, allowed: false });
         } catch (error) {
             this.logger.error(
-                `Failed to consume anonymous usage for ${ip}`,
+                'Failed to consume anonymous usage',
                 error instanceof Error ? error.stack : undefined,
             );
             return ResultEntity.failure(ErrorEntity.DatabaseError('Failed to consume anonymous usage'));
