@@ -125,8 +125,7 @@ describe('History API integration', () => {
         const response = await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
-            .set('X-Forwarded-For', '203.0.113.8')
-            .send({ theme: 'fantasy' })
+            .send({ ip: '203.0.113.8', theme: 'fantasy' })
             .expect(201);
 
         expect(bodyOf<AnonymousHistoryResponseBody>(response)).toMatchObject({
@@ -140,7 +139,7 @@ describe('History API integration', () => {
         const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).select('+anonymousVisitorKey').lean();
         expect(saved).toMatchObject({ content: 'Generated integration history', type: HistoryType.ANONYMOUS });
         expect(saved).not.toHaveProperty('ip');
-        expect(saved?.anonymousVisitorKey).toMatch(/^v1:/);
+        expect(saved?.anonymousVisitorKey).toBe('203.0.113.8');
         expect(saved?.userId).toBeUndefined();
     });
 
@@ -150,7 +149,7 @@ describe('History API integration', () => {
             const requestBuilder = api().post('/api/v1/history/generate/anonymous');
             if (token) requestBuilder.set('Authorization', token);
 
-            await requestBuilder.set('X-Forwarded-For', '203.0.113.9').send({}).expect(401);
+            await requestBuilder.send({ ip: '203.0.113.9' }).expect(401);
             expect(aiMock.generateContent).not.toHaveBeenCalled();
         },
     );
@@ -159,7 +158,6 @@ describe('History API integration', () => {
         await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
-            .set('X-Forwarded-For', '203.0.113.9')
             .send({ ip: '203.0.113.9', userId: 'untrusted-user', type: HistoryType.QUERY })
             .expect(400);
 
@@ -172,8 +170,7 @@ describe('History API integration', () => {
             api()
                 .post('/api/v1/history/generate/anonymous')
                 .set('Authorization', 'integration-frontend-token')
-                .set('X-Forwarded-For', index % 2 === 0 ? '198.51.100.27' : '::ffff:198.51.100.27')
-                .send({}),
+                .send({ ip: index % 2 === 0 ? '198.51.100.27' : '::ffff:198.51.100.27' }),
         );
         const responses = await Promise.all(requests);
         const created = responses.filter((response) => response.status === 201);
@@ -196,8 +193,7 @@ describe('History API integration', () => {
         const generationFailure = await api()
             .post('/api/v1/history/generate/anonymous')
             .set('Authorization', 'integration-frontend-token')
-            .set('X-Forwarded-For', '203.0.113.10')
-            .send({})
+            .send({ ip: '203.0.113.10' })
             .expect(503);
         expect(bodyOf<ErrorResponseBody>(generationFailure).code).toBe(
             ErrorCodes.AnonymousGenerationUnavailable,

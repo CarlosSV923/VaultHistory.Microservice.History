@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Res, Patch, Param, Req, UseGuards } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import { Body, Controller, Get, Post, Query, Res, Patch, Param, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import {
     GenerateHistoryUseCase,
     GenerateAnonymousHistoryUseCase,
@@ -74,10 +74,9 @@ export class HistoryController {
     @ApiServiceUnavailableResponse({ description: 'Anonymous generation unavailable', type: ErrorEntity })
     async generateAnonymousHistory(
         @Body() body: GenerateAnonymousHistoryRequestDTO,
-        @Req() request: Request,
         @Res() response: Response,
     ) {
-        const result = await this.generateAnonymousHistoryUseCase.execute({ ...body, ip: request.ip ?? '' });
+        const result = await this.generateAnonymousHistoryUseCase.execute(body);
 
         if (!result.isSuccess) {
             const status = ErrorCodeMapper.toHttpStatusCode(result.error.code);
@@ -106,11 +105,10 @@ export class HistoryController {
     @ApiInternalServerErrorResponse({ description: 'Unhandled server error', type: ErrorEntity })
     async getAnonymousHistories(
         @Query() filter: GetAnonymousHistoriesRequestDTO,
-        @Req() request: Request,
         @Res() response: Response,
     ) {
         const { page = 1, pageSize = 20 } = filter;
-        const result = await this.getAnonymousHistoriesUseCase.execute({ ip: request.ip ?? '', page, pageSize });
+        const result = await this.getAnonymousHistoriesUseCase.execute({ ip: filter.ip, page, pageSize });
 
         if (result.isFailure) {
             const error = result.error;

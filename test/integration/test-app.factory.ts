@@ -24,7 +24,6 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
     process.env.AUTH_TOKEN_JOB = 'integration-job-token';
     process.env.AUTH_TOKEN_FORNT = 'integration-frontend-token';
     process.env.ANONYMOUS_DAILY_LIMIT = '3';
-    process.env.ANONYMOUS_VISITOR_HMAC_KEYS = 'v1:integration-anonymous-visitor-secret';
     process.env.SWAGGER_ENABLE = 'false';
 
     // AppModule reads process.env.MONGO_URI in its module decorator, so load it after env setup.
@@ -58,7 +57,6 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
         type: VersioningType.URI,
         defaultVersion: '1',
     });
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
     await app.init();
 

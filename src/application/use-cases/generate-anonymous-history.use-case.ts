@@ -10,7 +10,7 @@ import {
     AnonymousGenerationClockToken,
     type AnonymousGenerationClock,
 } from '../anonymous-generation.clock';
-import { AnonymousVisitorKeyService } from '../anonymous-visitor-key.service';
+import { normalizeAnonymousIp } from '../anonymous-ip.normalizer';
 import { GenerateHistoryUseCase } from './generate-history.use-case';
 
 export type AnonymousUsage = {
@@ -39,7 +39,6 @@ export class GenerateAnonymousHistoryUseCase {
         private readonly usageRepository: AnonymousDailyUsageRepositoryPort,
         @Inject(AnonymousGenerationClockToken)
         private readonly clock: AnonymousGenerationClock,
-        private readonly anonymousVisitorKeyService: AnonymousVisitorKeyService,
     ) {}
 
     async execute(params: GenerateAnonymousHistoryParams): Promise<GenerateAnonymousHistoryResult> {
@@ -47,8 +46,8 @@ export class GenerateAnonymousHistoryUseCase {
             return { isSuccess: false, error: ErrorEntity.AnonymousGenerationDisabled() };
         }
 
-        const anonymousVisitorKey = this.anonymousVisitorKeyService.createCurrentKey(params.ip);
-        if (anonymousVisitorKey.isFailure) return { isSuccess: false, error: anonymousVisitorKey.error };
+        const normalizedIp = normalizeAnonymousIp(params.ip);
+        if (normalizedIp.isFailure) return { isSuccess: false, error: normalizedIp.error };
 
         const now = this.clock.now();
         const day = now.toISOString().slice(0, 10);
@@ -57,7 +56,7 @@ export class GenerateAnonymousHistoryUseCase {
             now.getUTCMonth(),
             now.getUTCDate() + 1,
         )).toISOString();
-        const consumed = await this.usageRepository.consume(anonymousVisitorKey.Value, day, this.config.dailyLimit);
+        const consumed = await this.usageRepository.consume(normalizedIp.Value, day, this.config.dailyLimit);
         if (consumed.isFailure) {
             return { isSuccess: false, error: ErrorEntity.AnonymousUsageUnavailable() };
         }
@@ -82,7 +81,7 @@ export class GenerateAnonymousHistoryUseCase {
         };
         const generated = await this.generateHistoryUseCase.execute({
             type: HistoryType.ANONYMOUS,
-            anonymousVisitorKey: anonymousVisitorKey.Value,
+            anonymousVisitorKey: normalizedIp.Value,
             ...(params.date !== undefined ? { date: params.date } : {}),
             ...(params.theme !== undefined ? { theme: params.theme } : {}),
             ...(params.character !== undefined ? { character: params.character } : {}),

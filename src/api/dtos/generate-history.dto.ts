@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIP, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class GenerateQueryHistoryRequestDTO {
@@ -73,6 +73,10 @@ export class GenerateHistoryResponseDTO {
 }
 
 export class GenerateAnonymousHistoryRequestDTO {
+    @ApiProperty({ example: '203.0.113.8' })
+    @IsIP()
+    ip!: string;
+
     @ApiPropertyOptional({ maxLength: 50 })
     @IsString()
     @MaxLength(50)
