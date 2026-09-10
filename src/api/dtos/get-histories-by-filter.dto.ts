@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsIP, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { HistoryResponseDTO } from './history-response.dto';
 import {
@@ -58,6 +58,38 @@ export class GetHistoriesByFilterRequestDTO {
         default: 20,
         example: 20,
         description: 'Maximum number of histories returned per page',
+    })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    @IsOptional()
+    pageSize?: number;
+}
+
+export class GetAnonymousHistoriesRequestDTO {
+    @ApiProperty({ example: '203.0.113.8', description: 'Anonymous visitor IP' })
+    @IsIP()
+    ip!: string;
+
+    @ApiPropertyOptional({
+        minimum: 1,
+        default: 1,
+        example: 1,
+        description: 'One-based page number',
+    })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @IsOptional()
+    page?: number;
+
+    @ApiPropertyOptional({
+        minimum: 1,
+        maximum: 100,
+        default: 20,
+        example: 20,
+        description: 'Maximum number of anonymous histories returned per page',
     })
     @Type(() => Number)
     @IsInt()

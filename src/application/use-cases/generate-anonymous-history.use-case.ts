@@ -46,8 +46,8 @@ export class GenerateAnonymousHistoryUseCase {
             return { isSuccess: false, error: ErrorEntity.AnonymousGenerationDisabled() };
         }
 
-        const ip = normalizeAnonymousIp(params.ip);
-        if (ip.isFailure) return { isSuccess: false, error: ip.error };
+        const normalizedIp = normalizeAnonymousIp(params.ip);
+        if (normalizedIp.isFailure) return { isSuccess: false, error: normalizedIp.error };
 
         const now = this.clock.now();
         const day = now.toISOString().slice(0, 10);
@@ -56,7 +56,7 @@ export class GenerateAnonymousHistoryUseCase {
             now.getUTCMonth(),
             now.getUTCDate() + 1,
         )).toISOString();
-        const consumed = await this.usageRepository.consume(ip.Value, day, this.config.dailyLimit);
+        const consumed = await this.usageRepository.consume(normalizedIp.Value, day, this.config.dailyLimit);
         if (consumed.isFailure) {
             return { isSuccess: false, error: ErrorEntity.AnonymousUsageUnavailable() };
         }
@@ -81,6 +81,7 @@ export class GenerateAnonymousHistoryUseCase {
         };
         const generated = await this.generateHistoryUseCase.execute({
             type: HistoryType.ANONYMOUS,
+            anonymousVisitorKey: normalizedIp.Value,
             ...(params.date !== undefined ? { date: params.date } : {}),
             ...(params.theme !== undefined ? { theme: params.theme } : {}),
             ...(params.character !== undefined ? { character: params.character } : {}),

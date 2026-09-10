@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
 import {
+    GetAnonymousHistoryFilter,
     GetHistoryFilter,
     HistoryPage,
     HistoryRepositoryPort,
@@ -11,6 +12,7 @@ import { History, HistoryDocument } from '../database/history.model';
 import { Model } from 'mongoose';
 import { HistoryRepositoryMapper } from './history-repository.mapper';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
@@ -64,6 +66,40 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
         } catch (error) {
             const baseMessage = `User ${filter.userId} - Failed to retrieve histories`;
 
+            this.logError(baseMessage, error);
+            return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
+        }
+    }
+
+    async getAnonymousHistoriesByFilter(
+        filter: GetAnonymousHistoryFilter,
+    ): Promise<ResultEntity<HistoryPage>> {
+        try {
+            const { anonymousVisitorKeys, page, pageSize } = filter;
+            const query = {
+                type: HistoryType.ANONYMOUS,
+                anonymousVisitorKey: { $in: anonymousVisitorKeys },
+                isActive: true,
+            };
+            const [histories, total] = await Promise.all([
+                this.historyModel
+                    .find(query)
+                    .sort({ generateAt: -1, _id: -1 })
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .lean()
+                    .exec(),
+                this.historyModel.countDocuments(query).exec(),
+            ]);
+            const historyEntities = histories.map((history) =>
+                HistoryRepositoryMapper.toEntity(history),
+            );
+            this.logger.log(
+                `Retrieved ${historyEntities.length} anonymous histories from page ${page} successfully`,
+            );
+            return ResultEntity.success({ histories: historyEntities, total });
+        } catch (error) {
+            const baseMessage = 'Failed to retrieve anonymous histories';
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
         }

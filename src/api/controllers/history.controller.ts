@@ -6,6 +6,7 @@ import {
     DeactivateHistoriesByUserIdUseCase,
     DeactivateHistoryByIdUseCase,
     GetHistoriesByFilterUseCase,
+    GetAnonymousHistoriesUseCase,
 } from '@application/use-cases';
 import {
     GenerateSubHistoryRequestDTO,
@@ -15,6 +16,7 @@ import {
     GenerateAnonymousHistoryResponseDTO,
     GetHistoriesByFilterRequestDTO,
     GetHistoriesByFilterResponseDTO,
+    GetAnonymousHistoriesRequestDTO,
 } from '../dtos';
 import { ErrorCodeMapper } from '@api/utils/error-code.mapper';
 import {
@@ -51,6 +53,7 @@ export class HistoryController {
         private readonly deactivateHistoryByIdUseCase: DeactivateHistoryByIdUseCase,
         private readonly deactivateHistoriesByUserIdUseCase: DeactivateHistoriesByUserIdUseCase,
         private readonly generateAnonymousHistoryUseCase: GenerateAnonymousHistoryUseCase,
+        private readonly getAnonymousHistoriesUseCase: GetAnonymousHistoriesUseCase,
     ) {}
 
     @UseGuards(FrontendTokenAuthGuard)
@@ -86,6 +89,50 @@ export class HistoryController {
         }
 
         response.status(201).json({ history: result.history, usage: result.usage });
+    }
+
+    @UseGuards(FrontendTokenAuthGuard)
+    @Get('list/anonymous')
+    @ApiOperation({ summary: 'Get anonymous histories for the caller IP resolved by the trusted proxy' })
+    @ApiHeader({
+        name: 'Authorization',
+        required: true,
+        description: 'Fixed frontend token configured through AUTH_TOKEN_FORNT',
+    })
+    @ApiOkResponse({ description: 'Anonymous histories found', type: GetHistoriesByFilterResponseDTO })
+    @ApiBadRequestResponse({ description: 'Invalid pagination parameters', type: ErrorEntity })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized - invalid or missing frontend token', type: ErrorEntity })
+    @ApiInternalServerErrorResponse({ description: 'Unhandled server error', type: ErrorEntity })
+    async getAnonymousHistories(
+        @Query() filter: GetAnonymousHistoriesRequestDTO,
+        @Res() response: Response,
+    ) {
+        const { page = 1, pageSize = 20 } = filter;
+        const result = await this.getAnonymousHistoriesUseCase.execute({ ip: filter.ip, page, pageSize });
+
+        if (result.isFailure) {
+            const error = result.error;
+            response.status(ErrorCodeMapper.toHttpStatusCode(error.code)).json({ ...error });
+            return;
+        }
+
+        response.status(200).json({
+            histories: result.Value.histories.map((history) => ({
+                id: history.id,
+                content: history.content,
+                type: history.type,
+                date: history.date,
+                theme: history.theme,
+                character: history.character,
+                generateAt: history.generateAt,
+            })),
+            meta: {
+                page,
+                pageSize,
+                total: result.Value.total,
+                totalPages: Math.ceil(result.Value.total / pageSize),
+            },
+        });
     }
 
     @UseGuards(JobTokenAuthGuard)

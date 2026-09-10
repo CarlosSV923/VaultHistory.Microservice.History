@@ -4,6 +4,7 @@ import {
     DeactivateHistoryByIdUseCase,
     GenerateHistoryUseCase,
     GenerateAnonymousHistoryUseCase,
+    GetAnonymousHistoriesUseCase,
     GetHistoriesByFilterUseCase,
 } from './use-cases';
 import { InfrastructureModule } from '@infrastructure/infrastructure.module';
@@ -18,6 +19,7 @@ import {
     exports: [
         GenerateHistoryUseCase,
         GenerateAnonymousHistoryUseCase,
+        GetAnonymousHistoriesUseCase,
         GetHistoriesByFilterUseCase,
         DeactivateHistoryByIdUseCase,
         DeactivateHistoriesByUserIdUseCase,
@@ -25,6 +27,7 @@ import {
     providers: [
         GenerateHistoryUseCase,
         GenerateAnonymousHistoryUseCase,
+        GetAnonymousHistoriesUseCase,
         GetHistoriesByFilterUseCase,
         DeactivateHistoryByIdUseCase,
         DeactivateHistoriesByUserIdUseCase,

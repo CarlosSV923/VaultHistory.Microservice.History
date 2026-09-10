@@ -3,6 +3,7 @@ import { type HistoryType } from '../history.type.enum';
 
 export interface GenerateHistoryParams {
     userId?: string;
+    anonymousVisitorKey?: string;
     type: HistoryType;
     date?: string;
     theme?: string;

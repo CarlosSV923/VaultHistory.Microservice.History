@@ -6,7 +6,7 @@ export type AnonymousUsageConsumption = {
 };
 
 export interface AnonymousDailyUsageRepositoryPort {
-    consume(ip: string, day: string, limit: number): Promise<ResultEntity<AnonymousUsageConsumption>>;
+    consume(anonymousVisitorKey: string, day: string, limit: number): Promise<ResultEntity<AnonymousUsageConsumption>>;
 }
 
 export const AnonymousDailyUsageRepositoryPortToken = Symbol('AnonymousDailyUsageRepositoryPort');

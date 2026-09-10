@@ -11,6 +11,7 @@ export class HistoryRepositoryMapper {
         return HistoryEntity.restore({
             id: historyModel._id.toHexString(),
             userId: historyModel.userId,
+            anonymousVisitorKey: historyModel.anonymousVisitorKey,
             content: historyModel.content,
             date: historyModel.date,
             theme: historyModel.theme,
@@ -26,10 +27,11 @@ export class HistoryRepositoryMapper {
         entity: HistoryEntity,
     ): Pick<
         History,
-        'userId' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt' | 'type' | 'idempotencyKey'
+        'userId' | 'anonymousVisitorKey' | 'content' | 'date' | 'theme' | 'character' | 'isActive' | 'generateAt' | 'type' | 'idempotencyKey'
     > {
         return {
             userId: entity.userId,
+            anonymousVisitorKey: entity.anonymousVisitorKey,
             content: entity.content,
             date: entity.date,
             theme: entity.theme,

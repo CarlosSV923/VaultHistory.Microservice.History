@@ -136,9 +136,10 @@ describe('History API integration', () => {
             theme: 'fantasy',
             type: HistoryType.ANONYMOUS,
         });
-        const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).lean();
+        const saved = await historyModel.findOne({ type: HistoryType.ANONYMOUS }).select('+anonymousVisitorKey').lean();
         expect(saved).toMatchObject({ content: 'Generated integration history', type: HistoryType.ANONYMOUS });
         expect(saved).not.toHaveProperty('ip');
+        expect(saved?.anonymousVisitorKey).toBe('203.0.113.8');
         expect(saved?.userId).toBeUndefined();
     });
 
@@ -178,12 +179,10 @@ describe('History API integration', () => {
         expect(created).toHaveLength(3);
         expect(exhausted).toHaveLength(7);
         expect(exhausted.every((response) => response.headers['retry-after'])).toBe(true);
-        expect(await anonymousUsageModel.find({ ip: '198.51.100.27' }).lean()).toEqual([
-            expect.objectContaining({ used: 3 }),
-        ]);
+        expect(await anonymousUsageModel.find({}).lean()).toEqual([expect.objectContaining({ used: 3 })]);
         expect(await anonymousUsageModel.collection.indexes()).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ key: { ip: 1, day: 1 }, unique: true }),
+                expect.objectContaining({ key: { anonymousVisitorKey: 1, day: 1 }, unique: true }),
             ]),
         );
         expect(await historyModel.countDocuments({ type: HistoryType.ANONYMOUS })).toBe(3);
@@ -200,7 +199,7 @@ describe('History API integration', () => {
             ErrorCodes.AnonymousGenerationUnavailable,
         );
 
-        const usageAfterGenerationFailure = await anonymousUsageModel.findOne({ ip: '203.0.113.10' }).lean();
+        const usageAfterGenerationFailure = await anonymousUsageModel.findOne({}).lean();
         expect(usageAfterGenerationFailure?.used).toBe(1);
     });
 
