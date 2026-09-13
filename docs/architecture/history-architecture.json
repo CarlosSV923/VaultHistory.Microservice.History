@@ -5,29 +5,40 @@
     "title": "History Microservice Architecture",
     "quality_profile": "showcase",
     "output": "history-architecture.html",
+    "viewBox": [1240, 740],
+    "repository": {
+      "url": "https://github.com/CarlosSV923/VaultHistory.Microservice.History",
+      "provider": "github",
+      "revision": "ce0af06a975aacb71f869518db1beede319545c7"
+    },
     "views": [
-      { "id": "interactive-api", "label": "Interactive API", "focus": ["client", "api", "application", "mongo"], "note": "JWT-protected endpoints generate, list and deactivate stories through application use cases." },
-      { "id": "subscription-api", "label": "Subscription generation", "focus": ["notification", "api", "application", "gemini", "mongo"], "note": "Notification calls the guarded subscription endpoint before it delivers an email." }
+      { "id": "authenticated-api", "label": "Authenticated API", "focus": ["user-clients", "history-api", "application-layer", "histories"], "note": "JWT-protected clients generate, list, and deactivate a user's stories." },
+      { "id": "anonymous-quota", "label": "Anonymous quota", "focus": ["frontend-client", "history-api", "application-layer", "daily-usage", "histories"], "note": "The frontend token protects anonymous calls while MongoDB atomically consumes the daily allowance." },
+      { "id": "scheduled-generation", "label": "Scheduled generation", "focus": ["notification-service", "history-api", "application-layer", "gemini", "histories"], "note": "The notification service uses an internal job token to create subscription stories." }
     ]
   },
   "components": [
-    { "id": "client", "type": "frontend", "label": "Client applications", "sublabel": "JWT-protected requests", "pos": [40, 150], "size": [175, 64] },
-    { "id": "notification", "type": "backend", "label": "Notification worker", "sublabel": "job token request", "pos": [40, 350], "size": [175, 64] },
-    { "id": "api", "type": "backend", "label": "History API", "sublabel": "NestJS controllers and guards", "pos": [300, 250], "size": [190, 64] },
-    { "id": "application", "type": "backend", "label": "Application and domain", "sublabel": "use cases and ports", "pos": [570, 250], "size": [190, 64] },
-    { "id": "mongo", "type": "database", "label": "MongoDB", "sublabel": "active and inactive stories", "pos": [850, 150], "size": [180, 64] },
-    { "id": "gemini", "type": "external", "label": "Google Gemini", "sublabel": "story generation", "pos": [850, 350], "size": [180, 64] }
+    { "id": "user-clients", "type": "frontend", "label": "User clients", "sublabel": "Bearer JWT requests", "pos": [40, 150], "size": [180, 66], "sources": [{ "path": "src/api/controllers/history.controller.ts", "line": 181, "end_line": 342, "label": "JWT routes" }] },
+    { "id": "notification-service", "type": "external", "label": "Notification service", "sublabel": "Subscription jobs", "pos": [40, 330], "size": [180, 66], "sources": [{ "path": "src/api/controllers/history.controller.ts", "line": 137, "end_line": 179, "label": "Job endpoint" }] },
+    { "id": "frontend-client", "type": "frontend", "label": "Frontend client", "sublabel": "Anonymous visitor calls", "pos": [40, 510], "size": [180, 66], "sources": [{ "path": "src/api/controllers/history.controller.ts", "line": 55, "end_line": 135, "label": "Anonymous routes" }] },
+    { "id": "history-api", "type": "backend", "label": "History API", "sublabel": "NestJS controllers and guards", "pos": [300, 330], "size": [195, 72], "sources": [{ "path": "src/api/controllers/history.controller.ts", "line": 48, "end_line": 342, "label": "HTTP boundary" }] },
+    { "id": "application-layer", "type": "backend", "label": "Application layer", "sublabel": "Use cases and domain ports", "pos": [570, 330], "size": [205, 72], "sources": [{ "path": "src/application/application.module.ts", "line": 1, "label": "Use-case wiring" }] },
+    { "id": "histories", "type": "database", "label": "MongoDB histories", "sublabel": "Stories and idempotency keys", "pos": [900, 175], "size": [200, 68], "sources": [{ "path": "src/infrastructure/database/history.model.ts", "line": 7, "end_line": 39, "label": "History schema" }] },
+    { "id": "daily-usage", "type": "database", "label": "MongoDB daily usage", "sublabel": "Per-IP UTC quota counter", "pos": [900, 350], "size": [200, 68], "sources": [{ "path": "src/infrastructure/database/anonymous-daily-usage.model.ts", "line": 4, "end_line": 18, "label": "Quota schema" }] },
+    { "id": "gemini", "type": "external", "label": "Google Gemini", "sublabel": "AI story generation", "pos": [900, 525], "size": [200, 68], "sources": [{ "path": "src/infrastructure/services/gemini.adapter.ts", "line": 11, "end_line": 100, "label": "AI adapter" }] }
   ],
   "connections": [
-    { "id": "client-api", "from": "client", "to": "api", "label": "HTTPS with JWT", "variant": "security" },
-    { "id": "notification-api", "from": "notification", "to": "api", "label": "POST subscription with job token", "variant": "security" },
-    { "id": "api-application", "from": "api", "to": "application", "label": "use cases", "variant": "emphasis" },
-    { "id": "application-mongo", "from": "application", "to": "mongo", "label": "Mongoose repository", "fromSide": "right", "toSide": "left", "labelAt": [805, 228] },
-    { "id": "application-gemini", "from": "application", "to": "gemini", "label": "generate story", "fromSide": "right", "toSide": "left" }
+    { "id": "users-to-api", "from": "user-clients", "to": "history-api", "label": "HTTPS with JWT", "variant": "security" },
+    { "id": "notification-to-api", "from": "notification-service", "to": "history-api", "label": "HTTPS with job token", "variant": "security", "labelDy": 60, "labelDx": -70 },
+    { "id": "frontend-to-api", "from": "frontend-client", "to": "history-api", "label": "HTTPS with fixed frontend token", "variant": "security" },
+    { "id": "api-to-application", "from": "history-api", "to": "application-layer", "label": "commands and queries", "variant": "emphasis", "labelDy": 60 },
+    { "id": "application-to-histories", "from": "application-layer", "to": "histories", "label": "Mongoose read and write" },
+    { "id": "application-to-usage", "from": "application-layer", "to": "daily-usage", "label": "atomic daily allowance", "labelAt": [715, 440] },
+    { "id": "application-to-gemini", "from": "application-layer", "to": "gemini", "label": "generate story" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "API protection", "items": ["Interactive routes use a JWT guard.", "Subscription generation uses the internal job token."] },
-    { "dot": "violet", "title": "DDD", "items": ["Use cases depend on repository and AI ports.", "Infrastructure supplies MongoDB and Gemini adapters."] },
-    { "dot": "emerald", "title": "Stories", "items": ["Generated stories are persisted in MongoDB.", "Deactivation keeps data while excluding it from active lists."] }
+    { "dot": "cyan", "title": "Access boundaries", "items": ["JWT protects user-owned history operations.", "Internal job and fixed frontend tokens protect their dedicated routes."] },
+    { "dot": "violet", "title": "Anonymous generation", "items": ["MongoDB atomically consumes the per-IP UTC daily quota.", "An accepted attempt remains consumed if generation or persistence fails."] },
+    { "dot": "emerald", "title": "Story lifecycle", "items": ["Gemini output is persisted through repository and AI ports.", "Deactivation keeps stored histories out of active lists."] }
   ]
 }
