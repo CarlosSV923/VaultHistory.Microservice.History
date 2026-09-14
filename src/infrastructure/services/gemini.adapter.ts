@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ResultEntity } from '@domain/abstractions/result.entity';
-import { AIServicePort, GenerateContentParams } from '@domain/histories/ports/ai-service.port';
+import { AIServicePort, GenerateHistoryParams } from '@domain/histories/ports/ai-service.port';
 import { ConfigService } from '@nestjs/config';
 import { GenerateContentResponse, GoogleGenAI } from '@google/genai';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
-import { defer, firstValueFrom, retry, timer } from 'rxjs';
+import { defer, firstValueFrom, retry, timer, timeout } from 'rxjs';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class GeminiAdapter implements AIServicePort {
@@ -21,7 +22,7 @@ export class GeminiAdapter implements AIServicePort {
         this.ai = new GoogleGenAI({ apiKey });
     }
 
-    private getPrompt(data: GenerateContentParams): string {
+    private getPrompt(data: GenerateHistoryParams): string {
         const { date, theme, character } = data;
 
         let prompt =
@@ -54,24 +55,28 @@ export class GeminiAdapter implements AIServicePort {
         });
     }
 
-    async generateContent(data: GenerateContentParams): Promise<ResultEntity<string>> {
+    async generateContent(data: GenerateHistoryParams): Promise<ResultEntity<string>> {
         const prompt = this.getPrompt(data);
+        const requester = data.userId ? `User ${data.userId}` : 'Anonymous';
+        const request$ = defer(() => this.callGeminiAPI(prompt));
 
-        const observable$ = defer(() => this.callGeminiAPI(prompt)).pipe(
-            retry({
-                count: 3,
-                delay: (error, retryCount) => {
-                    this.logger.warn(`User ${data.userId} - Retry ${retryCount}/3 for Gemini`);
-                    return timer(3000);
-                },
-            }),
-        );
+        const observable$ = data.type === HistoryType.ANONYMOUS
+            ? request$.pipe(timeout({ first: 20_000 }))
+            : request$.pipe(
+                  retry({
+                      count: 3,
+                      delay: (error, retryCount) => {
+                          this.logger.warn(`${requester} - Retry ${retryCount}/3 for Gemini`);
+                          return timer(3000);
+                      },
+                  }),
+              );
 
         try {
             const response = await firstValueFrom(observable$);
             if (!response?.text) {
                 this.logger.warn(
-                    `User ${data.userId} - Received empty response from Gemini - response: ` +
+                    `${requester} - Received empty response from Gemini - response: ` +
                         JSON.stringify(response),
                 );
                 return ResultEntity.failure(
@@ -79,13 +84,13 @@ export class GeminiAdapter implements AIServicePort {
                 );
             }
             this.logger.log(
-                `User ${data.userId} - Content generated successfully with Gemini - response-id: ` +
+                `${requester} - Content generated successfully with Gemini - response-id: ` +
                     JSON.stringify(response.responseId),
             );
             return ResultEntity.success(response.text);
         } catch (error) {
             this.logger.error(
-                `User ${data.userId} - Error generating content with Gemini - Message: ` +
+                `${requester} - Error generating content with Gemini - Message: ` +
                     (error instanceof Error ? error.message : 'Unknown error'),
                 error instanceof Error ? error.stack : null,
             );

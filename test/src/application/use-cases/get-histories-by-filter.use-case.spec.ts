@@ -12,6 +12,7 @@ describe('GetHistoriesByFilterUseCase', () => {
         mockHistoryRepository = {
             saveHistory: jest.fn(),
             getHistoriesByFilter: jest.fn(),
+            getAnonymousHistoriesByFilter: jest.fn(),
             deactivateByUserId: jest.fn(),
             deactivateById: jest.fn(),
         };
@@ -23,6 +24,8 @@ describe('GetHistoriesByFilterUseCase', () => {
         const filter = {
             userId: 'user123',
             theme: 'Adventure',
+            page: 1,
+            pageSize: 20,
         };
         const histories = [
             HistoryEntity.restore({
@@ -34,7 +37,7 @@ describe('GetHistoriesByFilterUseCase', () => {
                 generateAt: new Date('2024-01-01'),
             }),
         ];
-        const expectedResult = ResultEntity.success(histories);
+        const expectedResult = ResultEntity.success({ histories, total: 1 });
 
         mockHistoryRepository.getHistoriesByFilter.mockResolvedValue(expectedResult);
 
@@ -47,8 +50,10 @@ describe('GetHistoriesByFilterUseCase', () => {
     it('should return repository failure', async () => {
         const filter = {
             userId: 'user123',
+            page: 1,
+            pageSize: 20,
         };
-        const expectedResult = ResultEntity.failure<HistoryEntity[]>(
+        const expectedResult = ResultEntity.failure(
             ErrorEntity.DatabaseError('Failed to retrieve histories'),
         );
 

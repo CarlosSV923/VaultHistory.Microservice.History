@@ -1,14 +1,18 @@
 import { type ResultEntity } from '../../abstractions/result.entity';
+import { type HistoryType } from '../history.type.enum';
 
-export interface GenerateContentParams {
-    userId: string;
+export interface GenerateHistoryParams {
+    userId?: string;
+    anonymousVisitorKey?: string;
+    type: HistoryType;
     date?: string;
     theme?: string;
     character?: string;
+    idempotencyKey?: string;
 }
 
 export interface AIServicePort {
-    generateContent(data: GenerateContentParams): Promise<ResultEntity<string>>;
+    generateContent(data: GenerateHistoryParams): Promise<ResultEntity<string>>;
 }
 
 export const AIServicePortToken = Symbol('AIServicePort');

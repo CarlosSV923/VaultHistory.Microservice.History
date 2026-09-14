@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { HistoryRepositoryMapper } from '@infrastructure/repositories/history-repository.mapper';
 import { HistoryEntity } from '@domain/histories/history.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 describe('HistoryRepositoryMapper', () => {
     describe('toEntity', () => {
@@ -16,6 +17,7 @@ describe('HistoryRepositoryMapper', () => {
                 character: 'Hero',
                 isActive: true,
                 generateAt: new Date('2024-01-01'),
+                type: HistoryType.QUERY,
             };
 
             // Act
@@ -31,6 +33,7 @@ describe('HistoryRepositoryMapper', () => {
             expect(entity.character).toBe(historyModel.character);
             expect(entity.isActive).toBe(historyModel.isActive);
             expect(entity.generateAt).toEqual(historyModel.generateAt);
+            expect(entity.type).toBe(historyModel.type);
         });
 
         it('should handle optional fields when they are undefined', () => {
@@ -45,6 +48,7 @@ describe('HistoryRepositoryMapper', () => {
                 character: undefined,
                 isActive: true,
                 generateAt: new Date(),
+                type: HistoryType.SUBSCRIPTION,
             };
 
             // Act
@@ -68,6 +72,7 @@ describe('HistoryRepositoryMapper', () => {
                 date: '2024-01-01',
                 theme: 'Adventure',
                 character: 'Hero',
+                type: HistoryType.QUERY,
             });
 
             // Act
@@ -82,6 +87,7 @@ describe('HistoryRepositoryMapper', () => {
             expect(model.character).toBe(entity.character);
             expect(model.isActive).toBe(true);
             expect(model.generateAt).toEqual(entity.generateAt);
+            expect(model.type).toBe(entity.type);
         });
 
         it('should handle entities without optional fields', () => {
@@ -89,6 +95,7 @@ describe('HistoryRepositoryMapper', () => {
             const entity = HistoryEntity.create({
                 userId: 'user123',
                 content: 'Test content',
+                type: HistoryType.SUBSCRIPTION,
             });
 
             // Act

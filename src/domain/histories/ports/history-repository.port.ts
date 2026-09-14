@@ -1,16 +1,33 @@
 import { type ResultEntity } from '../../abstractions/result.entity';
 import { type HistoryEntity } from '../history.entity';
+import type { HistoryType } from '../history.type.enum';
 
 export interface GetHistoryFilter {
     userId: string;
     date?: string;
     theme?: string;
     character?: string;
+    type?: HistoryType;
+    page: number;
+    pageSize: number;
+}
+
+export interface GetAnonymousHistoryFilter {
+    anonymousVisitorKeys: string[];
+    page: number;
+    pageSize: number;
+}
+
+export interface HistoryPage {
+    histories: HistoryEntity[];
+    total: number;
 }
 
 export interface HistoryRepositoryPort {
     saveHistory(entity: HistoryEntity): Promise<ResultEntity<void>>;
-    getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>>;
+    getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryPage>>;
+    getAnonymousHistoriesByFilter(filter: GetAnonymousHistoryFilter): Promise<ResultEntity<HistoryPage>>;
+    getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>>;
     deactivateByUserId(userId: string): Promise<ResultEntity<void>>;
     deactivateById(id: string, userId: string): Promise<ResultEntity<void>>;
 }

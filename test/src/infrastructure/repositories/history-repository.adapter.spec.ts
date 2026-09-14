@@ -65,9 +65,18 @@ describe('HistoryRepositoryAdapter', () => {
 
             const mockHistoryModel = {
                 find: jest.fn().mockReturnValue({
-                    lean: jest.fn().mockReturnValue({
-                        exec: jest.fn().mockResolvedValue(mockHistories),
+                    sort: jest.fn().mockReturnValue({
+                        skip: jest.fn().mockReturnValue({
+                            limit: jest.fn().mockReturnValue({
+                                lean: jest.fn().mockReturnValue({
+                                    exec: jest.fn().mockResolvedValue(mockHistories),
+                                }),
+                            }),
+                        }),
                     }),
+                }),
+                countDocuments: jest.fn().mockReturnValue({
+                    exec: jest.fn().mockResolvedValue(1),
                 }),
             };
 
@@ -84,21 +93,29 @@ describe('HistoryRepositoryAdapter', () => {
             const adapter = module.get<HistoryRepositoryAdapter>(HistoryRepositoryAdapter);
 
             // Act
-            const result = await adapter.getHistoriesByFilter({ userId: 'user123' });
+            const result = await adapter.getHistoriesByFilter({ userId: 'user123', page: 1, pageSize: 20 });
 
             // Assert
             expect(result.isSuccess).toBe(true);
-            expect(result.Value).toHaveLength(1);
+            expect(result.Value.histories).toHaveLength(1);
+            expect(result.Value.total).toBe(1);
         });
 
         it('should return empty array when no histories found', async () => {
             // Arrange
             const mockHistoryModel = {
                 find: jest.fn().mockReturnValue({
-                    lean: jest.fn().mockReturnValue({
-                        exec: jest.fn().mockResolvedValue([]),
+                    sort: jest.fn().mockReturnValue({
+                        skip: jest.fn().mockReturnValue({
+                            limit: jest.fn().mockReturnValue({
+                                lean: jest.fn().mockReturnValue({
+                                    exec: jest.fn().mockResolvedValue([]),
+                                }),
+                            }),
+                        }),
                     }),
                 }),
+                countDocuments: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(0) }),
             };
 
             const module: TestingModule = await Test.createTestingModule({
@@ -114,11 +131,12 @@ describe('HistoryRepositoryAdapter', () => {
             const adapter = module.get<HistoryRepositoryAdapter>(HistoryRepositoryAdapter);
 
             // Act
-            const result = await adapter.getHistoriesByFilter({ userId: 'user123' });
+            const result = await adapter.getHistoriesByFilter({ userId: 'user123', page: 1, pageSize: 20 });
 
             // Assert
             expect(result.isSuccess).toBe(true);
-            expect(result.Value).toHaveLength(0);
+            expect(result.Value.histories).toHaveLength(0);
+            expect(result.Value.total).toBe(0);
         });
 
         it('should return failure on database error', async () => {
@@ -142,7 +160,7 @@ describe('HistoryRepositoryAdapter', () => {
             const adapter = module.get<HistoryRepositoryAdapter>(HistoryRepositoryAdapter);
 
             // Act
-            const result = await adapter.getHistoriesByFilter({ userId: 'user123' });
+            const result = await adapter.getHistoriesByFilter({ userId: 'user123', page: 1, pageSize: 20 });
 
             // Assert
             expect(result.isSuccess).toBe(false);

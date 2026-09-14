@@ -3,13 +3,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
 import {
+    GetAnonymousHistoryFilter,
     GetHistoryFilter,
+    HistoryPage,
     HistoryRepositoryPort,
 } from '@domain/histories/ports/history-repository.port';
 import { History, HistoryDocument } from '../database/history.model';
 import { Model } from 'mongoose';
 import { HistoryRepositoryMapper } from './history-repository.mapper';
 import { ErrorEntity } from '@domain/abstractions/error.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
@@ -30,33 +33,85 @@ export class HistoryRepositoryAdapter implements HistoryRepositoryPort {
 
             const result = await history.save();
             this.logger.log(
-                `User ${entity.userId} - History saved successfully - Id: ${result._id.toHexString()}`,
+                `${entity.userId ? `User ${entity.userId}` : 'Anonymous'} - History saved successfully - Id: ${result._id.toHexString()}`,
             );
             return ResultEntity.success();
         } catch (error) {
-            const baseMessage = `User ${entity.userId} - Failed to save history`;
+            const baseMessage = `${entity.userId ? `User ${entity.userId}` : 'Anonymous'} - Failed to save history`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
         }
     }
 
-    async getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryEntity[]>> {
+    async getHistoriesByFilter(filter: GetHistoryFilter): Promise<ResultEntity<HistoryPage>> {
         try {
-            const histories = await this.historyModel
-                .find({ ...filter, isActive: true })
-                .lean()
-                .exec();
+            const { page, pageSize, ...criteria } = filter;
+            const query = { ...criteria, isActive: true };
+            const [histories, total] = await Promise.all([
+                this.historyModel
+                    .find(query)
+                    .sort({ generateAt: -1, _id: -1 })
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .lean()
+                    .exec(),
+                this.historyModel.countDocuments(query).exec(),
+            ]);
             const historyEntities = histories.map((history) =>
                 HistoryRepositoryMapper.toEntity(history),
             );
-            this.logger.log(`Retrieved ${historyEntities.length} histories successfully`);
-            return ResultEntity.success(historyEntities);
+            this.logger.log(`Retrieved ${historyEntities.length} histories from page ${page} successfully`);
+            return ResultEntity.success({ histories: historyEntities, total });
         } catch (error) {
             const baseMessage = `User ${filter.userId} - Failed to retrieve histories`;
 
             this.logError(baseMessage, error);
             return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
+        }
+    }
+
+    async getAnonymousHistoriesByFilter(
+        filter: GetAnonymousHistoryFilter,
+    ): Promise<ResultEntity<HistoryPage>> {
+        try {
+            const { anonymousVisitorKeys, page, pageSize } = filter;
+            const query = {
+                type: HistoryType.ANONYMOUS,
+                anonymousVisitorKey: { $in: anonymousVisitorKeys },
+                isActive: true,
+            };
+            const [histories, total] = await Promise.all([
+                this.historyModel
+                    .find(query)
+                    .sort({ generateAt: -1, _id: -1 })
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .lean()
+                    .exec(),
+                this.historyModel.countDocuments(query).exec(),
+            ]);
+            const historyEntities = histories.map((history) =>
+                HistoryRepositoryMapper.toEntity(history),
+            );
+            this.logger.log(
+                `Retrieved ${historyEntities.length} anonymous histories from page ${page} successfully`,
+            );
+            return ResultEntity.success({ histories: historyEntities, total });
+        } catch (error) {
+            const baseMessage = 'Failed to retrieve anonymous histories';
+            this.logError(baseMessage, error);
+            return ResultEntity.failure(ErrorEntity.DatabaseError(baseMessage));
+        }
+    }
+
+    async getByIdempotencyKey(key: string): Promise<ResultEntity<HistoryEntity | null>> {
+        try {
+            const history = await this.historyModel.findOne({ idempotencyKey: key }).lean().exec();
+            return ResultEntity.success(history ? HistoryRepositoryMapper.toEntity(history) : null);
+        } catch (error) {
+            this.logError(`Failed to retrieve history checkpoint ${key}`, error);
+            return ResultEntity.failure(ErrorEntity.DatabaseError('Failed to retrieve history checkpoint'));
         }
     }
 

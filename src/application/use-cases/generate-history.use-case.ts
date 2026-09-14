@@ -2,9 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
 import type { AIServicePort } from '@domain/histories/ports/ai-service.port';
-import { AIServicePortToken, GenerateContentParams } from '@domain/histories/ports/ai-service.port';
+import { AIServicePortToken, GenerateHistoryParams } from '@domain/histories/ports/ai-service.port';
 import type { HistoryRepositoryPort } from '@domain/histories/ports/history-repository.port';
 import { HistoryRepositoryPortToken } from '@domain/histories/ports/history-repository.port';
+import { ErrorEntity } from '@domain/abstractions/error.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 @Injectable()
 export class GenerateHistoryUseCase {
@@ -14,8 +16,24 @@ export class GenerateHistoryUseCase {
         @Inject(AIServicePortToken)
         private readonly aiServicePort: AIServicePort,
     ) {}
-    async execute(params: GenerateContentParams): Promise<ResultEntity<string>> {
-        const contentResult = await this.aiServicePort.generateContent(params);
+    async execute(params: GenerateHistoryParams): Promise<ResultEntity<string>> {
+        const hasUserId = typeof params.userId === 'string' && params.userId.length > 0;
+        const hasAnonymousVisitorKey =
+            typeof params.anonymousVisitorKey === 'string' && params.anonymousVisitorKey.length > 0;
+        if (
+            (params.type === HistoryType.ANONYMOUS && (hasUserId || !hasAnonymousVisitorKey)) ||
+            (params.type !== HistoryType.ANONYMOUS && (!hasUserId || hasAnonymousVisitorKey))
+        ) {
+            return ResultEntity.failure(ErrorEntity.ValidationError('Invalid history owner for its type'));
+        }
+
+        if (params.idempotencyKey) {
+            const existing = await this.historyRepositoryPort.getByIdempotencyKey(params.idempotencyKey);
+            if (existing.isFailure) return ResultEntity.failure(existing.error);
+            if (existing.Value) return ResultEntity.success(existing.Value.content);
+        }
+        const { anonymousVisitorKey, ...generationParams } = params;
+        const contentResult = await this.aiServicePort.generateContent(generationParams);
 
         if (contentResult.isFailure) {
             return ResultEntity.failure(contentResult.error);
@@ -23,10 +41,13 @@ export class GenerateHistoryUseCase {
 
         const newHistory = HistoryEntity.create({
             userId: params.userId,
+            anonymousVisitorKey,
             content: contentResult.Value,
             date: params.date,
             theme: params.theme,
             character: params.character,
+            type: params.type,
+            idempotencyKey: params.idempotencyKey,
         });
 
         const saveResult = await this.historyRepositoryPort.saveHistory(newHistory);

@@ -1,4 +1,4 @@
-import { type INestApplication, VersioningType } from '@nestjs/common';
+import { type INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { AppModule as NestAppModule } from '../../src/app.module';
@@ -21,6 +21,9 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
     process.env.JWT_SECRET = 'integration-secret';
     process.env.JWT_ISSUER = 'vault-history-test';
     process.env.JWT_AUDIENCE = 'vault-history-users';
+    process.env.AUTH_TOKEN_JOB = 'integration-job-token';
+    process.env.AUTH_TOKEN_FORNT = 'integration-frontend-token';
+    process.env.ANONYMOUS_DAILY_LIMIT = '3';
     process.env.SWAGGER_ENABLE = 'false';
 
     // AppModule reads process.env.MONGO_URI in its module decorator, so load it after env setup.
@@ -42,6 +45,13 @@ export async function createIntegrationApp(): Promise<IntegrationAppSetup> {
 
     const app = moduleRef.createNestApplication();
 
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+            transform: true,
+        }),
+    );
     app.setGlobalPrefix('api');
     app.enableVersioning({
         type: VersioningType.URI,

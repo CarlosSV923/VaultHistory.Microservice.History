@@ -13,16 +13,22 @@ describe('History Model', () => {
             expect(HistorySchema).toBeDefined();
         });
 
-        it('should have userId field as required', () => {
+        it('requires userId for owned histories and allows it to be absent for anonymous histories', () => {
             const paths = HistorySchema.paths;
             expect(paths.userId).toBeDefined();
-            expect(paths.userId.isRequired).toBe(true);
+            expect(paths.userId.options.required).toEqual(expect.any(Function));
         });
 
         it('should have content field as required', () => {
             const paths = HistorySchema.paths;
             expect(paths.content).toBeDefined();
             expect(paths.content.isRequired).toBe(true);
+        });
+
+        it('should have type field as required', () => {
+            const paths = HistorySchema.paths;
+            expect(paths.type).toBeDefined();
+            expect(paths.type.isRequired).toBe(true);
         });
 
         it('should have isActive field with default true', () => {
@@ -45,6 +51,13 @@ describe('History Model', () => {
             expect(paths.date.isRequired).toBe(false);
             expect(paths.theme.isRequired).toBe(false);
             expect(paths.character.isRequired).toBe(false);
+        });
+
+        it('indexes active histories by owner and deterministic list order', () => {
+            expect(HistorySchema.indexes()).toContainEqual([
+                { userId: 1, isActive: 1, generateAt: -1, _id: -1 },
+                {},
+            ]);
         });
     });
 });

@@ -1,420 +1,113 @@
 # VaultHistory.Microservice.History
 
-Microservicio desarrollado con NestJS para el modulo de historias dentro del sistema VaultHistory.
+History is the NestJS service that generates, stores, lists, and deactivates stories for the Vault History system. It keeps the domain independent of persistence and AI providers: application use cases depend on ports, while Mongoose and Gemini implement those ports in infrastructure.
 
-Este repositorio documenta principalmente aspectos tecnicos del proyecto: arquitectura, ejecucion local, Docker, MongoDB, Mongoose, autenticacion JWT, integracion con Gemini y flujo de pruebas.
+## Architecture
 
-## Stack Tecnico
+![History microservice architecture](docs/architecture/history-architecture.png)
 
-- Node.js 24
-- TypeScript
-- NestJS
-- MongoDB
-- Mongoose
-- Docker / Docker Compose
-- Jest
-- mongodb-memory-server
-- Swagger / OpenAPI
-- Google Gemini API
+The service accepts three kinds of requests: JWT-protected user requests, subscription jobs authenticated with the internal job token, and anonymous frontend requests authenticated with the fixed frontend token. The application layer delegates story generation to Gemini, persists stories in MongoDB, and atomically consumes the anonymous daily quota in a separate MongoDB collection.
 
-## Arquitectura
+- [Interactive architecture diagram](docs/architecture/history-architecture.html)
+- [Editable diagram specification](docs/architecture/history-architecture.json)
 
-El proyecto esta organizado por capas, separando dominio, casos de uso, infraestructura y API.
+## Responsibilities
 
-```txt
+- Generate subscription, authenticated query, and anonymous stories with Gemini.
+- Store active and deactivated stories in MongoDB through Mongoose repositories.
+- List active stories for an authenticated user or an anonymous visitor key.
+- Enforce the anonymous daily generation allowance atomically per normalized IP and UTC day.
+- Reuse a previously stored subscription story when its `idempotencyKey` matches.
+
+## API and authentication
+
+The API uses the `/api/v1/history` base path. Swagger is available at `/docs/v1` when `SWAGGER_ENABLE=true` and `NODE_ENV` is not `production`.
+
+| Route | Authentication | Purpose |
+| --- | --- | --- |
+| `POST /generate/query` | Bearer JWT | Generate a story for the authenticated user. |
+| `GET /list` | Bearer JWT | List the authenticated user's active stories, with filters and pagination. |
+| `PATCH /deactivate-by-id/:id` | Bearer JWT | Deactivate one story owned by the authenticated user. |
+| `PATCH /deactivate-by-user` | Bearer JWT | Deactivate all active stories owned by the authenticated user. |
+| `POST /generate/subscription` | `AUTH_TOKEN_JOB` | Generate a subscription story for a supplied user ID. |
+| `POST /generate/anonymous` | `AUTH_TOKEN_FORNT` | Generate an anonymous story subject to the daily allowance. |
+| `GET /list/anonymous` | `AUTH_TOKEN_FORNT` | List active anonymous stories for the declared visitor IP. |
+
+`AUTH_TOKEN_FORNT` is the environment-variable name used by the implemented service. The anonymous generation endpoint accepts a declared IPv4 or IPv6 address in its request body; the anonymous list endpoint receives it as a query parameter. The service normalizes that value, but it does not trust the connection address or forwarding headers. This is not a strong abuse-control boundary: shared addresses share the allowance, and a caller can change its declared address.
+
+For anonymous generation, `ANONYMOUS_DAILY_LIMIT` defaults to `3` and can be set to `0` to disable the endpoint. MongoDB consumes an accepted request before Gemini is called; that attempt remains consumed if Gemini times out, fails, or persistence fails. Responses include `usage.limit`, `usage.remaining`, and `usage.resetAt`. An exhausted quota returns `429`, `ANONYMOUS_DAILY_LIMIT_EXCEEDED`, and `Retry-After`.
+
+## Design and data
+
+The codebase follows a layered design:
+
+```text
 src/
-  api/
-  application/
-  domain/
-  infrastructure/
-  app.module.ts
-  main.ts
-
-test/
-  integration/
-  src/
+  api/             HTTP controller, DTOs, guards, Swagger, and exception handling
+  application/     use cases and anonymous-generation policy
+  domain/          story entities, errors, results, and port contracts
+  infrastructure/  Mongoose repositories and the Gemini adapter
+  app.module.ts    configuration, MongoDB, and module composition
 ```
 
-### Domain
+The `histories` collection stores generated content, its type, optional owner or anonymous visitor key, optional idempotency key, creation time, and `isActive`. Deactivation is a soft state change, so inactive entries are excluded from active lists. The `anonymous_daily_usage` collection has a unique visitor-key and UTC-day counter that supports the atomic allowance check.
 
-Contiene el modelo de dominio y las reglas principales del sistema.
+## Prerequisites and configuration
 
-Incluye:
+- Node.js 24 and pnpm (the repository recommends Volta with Node `24.16.0`).
+- MongoDB, either locally or through the central Docker environment.
+- A Google Gemini API key only for real story generation. Unit and integration tests use doubles or an in-memory MongoDB instance and do not send requests to Gemini.
 
-- Entities
-- Abstracciones compartidas del dominio
-- Result y Error entities
-- Interfaces/puertos de repositorios
-- Interfaces/puertos para servicios externos
-
-Esta capa no depende de infraestructura, frameworks externos ni detalles de persistencia.
-
-### Application
-
-Contiene los casos de uso y la logica de aplicacion.
-
-Incluye:
-
-- Use Cases
-- Coordinacion entre dominio, repositorios y servicios externos
-- Modulo de aplicacion
-
-Casos de uso principales:
-
-- Generar una historia con IA.
-- Consultar historias activas por filtros.
-- Desactivar una historia por identificador.
-- Desactivar todas las historias de un usuario.
-
-Esta capa coordina el flujo de trabajo entre el dominio y las dependencias externas, sin conocer detalles concretos de infraestructura.
-
-### Infrastructure
-
-Contiene implementaciones concretas para persistencia y servicios externos.
-
-Incluye:
-
-- Modelo Mongoose `History`
-- Adaptador de repositorio MongoDB
-- Mapper entre modelo persistente y entidad de dominio
-- Adaptador de Gemini
-- Configuracion de proveedores de infraestructura
-
-### Api
-
-Expone los endpoints HTTP del microservicio.
-
-Incluye:
-
-- Controller de historias
-- DTOs de request/response
-- Guard de autenticacion JWT
-- Strategy JWT
-- Decorador de usuario autenticado
-- Filtro global de excepciones
-- Swagger / OpenAPI
-
-Endpoints principales:
-
-```txt
-POST  /api/v1/history/generate
-GET   /api/v1/history/list
-PATCH /api/v1/history/deactivate-by-id/:id
-PATCH /api/v1/history/deactivate-by-user
-```
-
-Todos los endpoints de historias requieren un JWT valido mediante `Authorization: Bearer <token>`.
-
-## Domain-Driven Design
-
-El proyecto aplica conceptos de Domain-Driven Design para mantener el dominio aislado y expresivo.
-
-Conceptos utilizados:
-
-- **Entities**: objetos con identidad propia.
-- **Ports**: contratos definidos desde el dominio para acceder a persistencia o servicios externos.
-- **Adapters**: implementaciones concretas de los puertos en infraestructura.
-- **Result Pattern**: respuesta explicita de exito o error sin depender de excepciones para el flujo esperado.
-- **Error Entity**: representacion uniforme de errores de dominio, base de datos, autenticacion o SDK.
-
-## Configuracion Local
-
-La API carga configuracion desde la carpeta:
-
-```txt
-config/
-```
-
-El archivo cargado depende de `NODE_ENV`:
-
-```txt
-config/.env.local
-config/.env.development
-config/.env.test
-config/.env.production
-Environment variables
-```
-
-Para ejecucion local, normalmente se usa el ambiente `local`.
-
-Ejemplo basado en `config/.env.local.example`:
+Create a local environment file at `config/.env.local`. Keep real credentials and tokens out of source control.
 
 ```env
-GOOGLE_API_KEY=api_key_here
+GOOGLE_API_KEY=replace_with_a_real_key_for_generation
 PORT=3000
 MONGO_URI=mongodb://vault_history:vault_history_password@localhost:27017/vault_history_local?authSource=admin
-JWT_SECRET=Your-Super-Secret-Key-That-Should-Be-Long-And-Secure
+JWT_SECRET=replace_with_a_secure_secret
 JWT_ISSUER=VaultHistory.User.Api
 JWT_AUDIENCE=VaultHistory.User.Clients
+AUTH_TOKEN_JOB=replace_with_a_secure_job_token
+AUTH_TOKEN_FORNT=replace_with_a_secure_frontend_token
+ANONYMOUS_DAILY_LIMIT=3
 SWAGGER_ENABLE=true
 ```
 
-Cuando la API corre dentro de Docker, la connection string debe usar el nombre del servicio de MongoDB:
+The application loads `config/.env.${NODE_ENV}`. When it runs inside Docker, use the MongoDB service host in `MONGO_URI` rather than `localhost`.
 
-```txt
-mongodb://vault_history:vault_history_password@mongodb:27017/vault_history_local?authSource=admin
-```
-
-## Instalar Dependencias
-
-Desde la raiz del repositorio:
+## Run locally
 
 ```bash
 pnpm install
-```
-
-## Ejecutar Con pnpm
-
-Desde la raiz del repositorio:
-
-```bash
-pnpm run start
-```
-
-Para ejecutar en modo watch:
-
-```bash
 pnpm run start:dev
 ```
 
-Para ejecutar en modo debug:
-
-```bash
-pnpm run start:debug
-```
-
-Para compilar el proyecto:
+Useful commands:
 
 ```bash
 pnpm run build
-```
-
-Para ejecutar la version compilada en modo produccion:
-
-```bash
+pnpm run start
 pnpm run start:prod
-```
-
-La API queda disponible por defecto en:
-
-```txt
-http://localhost:3000
-```
-
-Swagger, cuando `SWAGGER_ENABLE=true` y el ambiente no es `production`:
-
-```txt
-http://localhost:3000/docs/v1
-```
-
-## Ejecutar Con Docker
-
-La configuracion Docker esta ubicada dentro de la carpeta:
-
-```txt
-docker/
-```
-
-Estructura:
-
-```txt
-docker/
-  Dockerfile
-  Dockerfile.dockerignore
-  docker-compose.yml
-```
-
-Para levantar la API junto con MongoDB y Mongo Express:
-
-```bash
-docker compose -f docker/docker-compose.yml up --build
-```
-
-Tambien se puede ejecutar desde la carpeta `docker`:
-
-```bash
-cd docker
-docker compose up --build
-```
-
-La API queda disponible en:
-
-```txt
-http://localhost:3000
-```
-
-Swagger:
-
-```txt
-http://localhost:3000/docs/v1
-```
-
-Mongo Express:
-
-```txt
-http://localhost:8081
-```
-
-Credenciales de Mongo Express definidas en `docker/docker-compose.yml`:
-
-```txt
-Username: admin
-Password: admin
-```
-
-Para detener los contenedores:
-
-```bash
-docker compose -f docker/docker-compose.yml down
-```
-
-Para detener los contenedores y eliminar el volumen de MongoDB:
-
-```bash
-docker compose -f docker/docker-compose.yml down -v
-```
-
-## MongoDB Y Mongoose
-
-El proyecto usa MongoDB como base de datos y Mongoose como ODM.
-
-El modelo persistente principal se encuentra en:
-
-```txt
-src/infrastructure/database/history.model.ts
-```
-
-Campos principales del documento `History`:
-
-```txt
-userId
-date
-theme
-content
-character
-isActive
-generateAt
-```
-
-La coleccion almacena historias generadas para un usuario. Las eliminaciones funcionales se manejan mediante `isActive=false`, por lo que las consultas de listado retornan solo historias activas.
-
-## Flujo Recomendado Para Cambios De Base De Datos
-
-Cada vez que se modifique el modelo persistente:
-
-```txt
-1. Actualizar el schema Mongoose.
-2. Actualizar el mapper entre modelo y entidad, si aplica.
-3. Ajustar puertos/adaptadores de repositorio, si aplica.
-4. Actualizar o agregar pruebas unitarias.
-5. Actualizar o agregar pruebas de integracion cuando cambie el comportamiento persistente.
-6. Probar el proyecto localmente.
-```
-
-Comandos utiles:
-
-```bash
 pnpm run test
 pnpm run test:e2e
 pnpm run test:cov
-```
-
-Si se desea probar Docker desde cero despues de cambios de persistencia:
-
-```bash
-docker compose -f docker/docker-compose.yml down -v
-docker compose -f docker/docker-compose.yml up --build
-```
-
-## Tests
-
-Ejecutar todos los tests unitarios:
-
-```bash
-pnpm run test
-```
-
-Ejecutar tests en modo watch:
-
-```bash
-pnpm run test:watch
-```
-
-Ejecutar tests con cobertura:
-
-```bash
-pnpm run test:cov
-```
-
-Ejecutar tests end-to-end/integracion:
-
-```bash
-pnpm run test:e2e
-```
-
-Los tests de integracion usan `mongodb-memory-server`, por lo que levantan una instancia temporal de MongoDB para probar la API sin depender de la base local de Docker.
-
-## Calidad De Codigo
-
-Formatear codigo:
-
-```bash
-pnpm run format
-```
-
-Ejecutar ESLint con autofix:
-
-```bash
 pnpm run lint
 ```
 
-## Herramientas Necesarias
-
-- Node.js 24
-- pnpm
-- Docker Desktop
-- MongoDB, opcional si se usa Docker
-- Google API Key para Gemini
-- Volta, opcional pero recomendado para fijar la version de Node.js
-
-Habilitar pnpm mediante Corepack:
+The central [Vault.History.System](https://github.com/CarlosSV923/Vault.History.System) repository owns the Docker Compose environment and service orchestration. From that repository, start the complete environment with:
 
 ```bash
-corepack enable
+docker compose up --build -d
 ```
 
-## Manejo De Versiones Con Volta
+## Testing
 
-El proyecto declara versiones recomendadas de runtime en `package.json` mediante Volta:
+Unit tests cover domain behavior, use cases, guards, Mongoose mappings, repository behavior, and Gemini-adapter error handling. Integration tests start `mongodb-memory-server` and exercise HTTP behavior against the Nest application. They verify service behavior without requiring real Google credentials or sending external requests.
 
-```json
-{
-    "volta": {
-        "node": "24.16.0",
-        "npm": "11.4.0"
-    }
-}
-```
+## Related repositories
 
-Volta es opcional, pero preferible para asegurar que todos los entornos de desarrollo usen la misma version de Node.js al entrar al repositorio.
-
-Instalar Volta:
-
-```bash
-winget install Volta.Volta
-```
-
-Verificar la instalacion:
-
-```bash
-volta --version
-```
-
-Una vez instalado, Volta detecta automaticamente la configuracion del proyecto y usa la version definida en `package.json`.
-
-Verificar versiones:
-
-```bash
-node --version
-pnpm --version
-```
+- [Vault.History.System](https://github.com/CarlosSV923/Vault.History.System) — central Docker environment and system documentation.
+- [VaultHistory.Microservice.User](https://github.com/CarlosSV923/VaultHistory.Microservice.User) — user identity and preferences.
+- [VaultHistory.Microservice.Jobs](https://github.com/CarlosSV923/VaultHistory.Microservice.Jobs) — scheduled work.
+- [VaultHistory.Microservice.Notification](https://github.com/CarlosSV923/VaultHistory.Microservice.Notification) — notification delivery.
+- [Portfolio Vault History System project](https://github.com/users/CarlosSV923/projects/3) — cross-repository work tracking.

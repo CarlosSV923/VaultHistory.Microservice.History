@@ -3,6 +3,8 @@ import { ErrorCodes, ErrorEntity } from '@domain/abstractions/error.entity';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { type AIServicePort } from '@domain/histories/ports/ai-service.port';
 import { type HistoryRepositoryPort } from '@domain/histories/ports/history-repository.port';
+import { HistoryEntity } from '@domain/histories/history.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 
 describe('GenerateHistoryUseCase', () => {
     let useCase: GenerateHistoryUseCase;
@@ -17,6 +19,8 @@ describe('GenerateHistoryUseCase', () => {
         mockHistoryRepository = {
             saveHistory: jest.fn(),
             getHistoriesByFilter: jest.fn(),
+            getAnonymousHistoriesByFilter: jest.fn(),
+            getByIdempotencyKey: jest.fn().mockResolvedValue(ResultEntity.success(null)),
             deactivateByUserId: jest.fn(),
             deactivateById: jest.fn(),
         };
@@ -30,6 +34,7 @@ describe('GenerateHistoryUseCase', () => {
             date: '2024-01-01',
             theme: 'Adventure',
             character: 'Hero',
+            type: HistoryType.QUERY,
         };
         const generatedContent = 'Generated history content';
 
@@ -50,11 +55,13 @@ describe('GenerateHistoryUseCase', () => {
         expect(savedHistory?.theme).toBe(params.theme);
         expect(savedHistory?.character).toBe(params.character);
         expect(savedHistory?.isActive).toBe(true);
+        expect(savedHistory?.type).toBe(params.type);
     });
 
     it('should return failure when AI service fails', async () => {
         const params = {
             userId: 'user123',
+            type: HistoryType.SUBSCRIPTION,
         };
         const error = ErrorEntity.SDKError('Failed to generate content');
 
@@ -72,6 +79,7 @@ describe('GenerateHistoryUseCase', () => {
         const params = {
             userId: 'user123',
             theme: 'Science Fiction',
+            type: HistoryType.QUERY,
         };
         const generatedContent = 'Generated sci-fi content';
         const error = ErrorEntity.DatabaseError('Failed to save history');
@@ -85,5 +93,27 @@ describe('GenerateHistoryUseCase', () => {
         expect(result.error).toBe(error);
         expect(result.error.code).toBe(ErrorCodes.DatabaseError);
         expect(mockHistoryRepository.saveHistory.mock.calls).toHaveLength(1);
+    });
+
+    it('should reuse a stored history when the idempotency key already exists', async () => {
+        const params = {
+            userId: 'user123',
+            type: HistoryType.SUBSCRIPTION,
+            idempotencyKey: 'user123:2026',
+        };
+        const existing = HistoryEntity.create({
+            userId: params.userId,
+            content: 'Previously generated history',
+            type: HistoryType.SUBSCRIPTION,
+            idempotencyKey: params.idempotencyKey,
+        });
+        mockHistoryRepository.getByIdempotencyKey.mockResolvedValue(ResultEntity.success(existing));
+
+        const result = await useCase.execute(params);
+
+        expect(result.isSuccess).toBe(true);
+        expect(result.Value).toBe('Previously generated history');
+        expect(mockAIService.generateContent).not.toHaveBeenCalled();
+        expect(mockHistoryRepository.saveHistory).not.toHaveBeenCalled();
     });
 });

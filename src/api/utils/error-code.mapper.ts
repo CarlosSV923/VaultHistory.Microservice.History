@@ -19,6 +19,14 @@ export class ErrorCodeMapper {
                 return 200; // OK
             case ErrorCodes.InternalServerError:
                 return 500; // Internal Server Error
+            case ErrorCodes.AnonymousDailyLimitExceeded:
+                return 429;
+            case ErrorCodes.AnonymousGenerationDisabled:
+            case ErrorCodes.AnonymousUsageUnavailable:
+            case ErrorCodes.AnonymousGenerationUnavailable:
+                return 503;
+            case ErrorCodes.AnonymousHistoryPersistenceFailed:
+                return 500;
             default:
                 return 500; // Internal Server Error for unknown error codes
         }

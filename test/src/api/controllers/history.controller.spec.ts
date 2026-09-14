@@ -8,6 +8,7 @@ import type {
 import { ErrorEntity } from '@domain/abstractions/error.entity';
 import { ResultEntity } from '@domain/abstractions/result.entity';
 import { HistoryEntity } from '@domain/histories/history.entity';
+import { HistoryType } from '@domain/histories/history.type.enum';
 import { type Response } from 'express';
 
 type ResponseBody = Record<string, unknown>;
@@ -64,7 +65,7 @@ describe('HistoryController', () => {
         );
     });
 
-    describe('generateHistory', () => {
+    describe('generateQueryHistory', () => {
         it('should generate history and return created response', async () => {
             const response = createResponse();
             const body = {
@@ -75,12 +76,13 @@ describe('HistoryController', () => {
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
 
-            await controller.generateHistory(body, user, asExpressResponse(response));
+            await controller.generateQueryHistory(body, user, asExpressResponse(response));
 
             expect(generateHistoryUseCase.execute.mock.calls).toEqual([
                 [
                     {
                         userId: 'user123',
+                        type: HistoryType.QUERY,
                         ...body,
                     },
                 ],
@@ -95,10 +97,56 @@ describe('HistoryController', () => {
 
             generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.failure(error));
 
-            await controller.generateHistory({}, user, asExpressResponse(response));
+            await controller.generateQueryHistory({}, user, asExpressResponse(response));
 
             expect(response.status.mock.calls).toEqual([[400]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
+        });
+
+        it('uses the authenticated identity and server-selected type when the controller is invoked directly', async () => {
+            const response = createResponse();
+            const untrustedBody = {
+                userId: 'another-user',
+                type: HistoryType.SUBSCRIPTION,
+                idempotencyKey: 'untrusted-key',
+                theme: 'Adventure',
+            } as unknown as {
+                date?: string;
+                theme?: string;
+                character?: string;
+            };
+
+            generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
+
+            await controller.generateQueryHistory(untrustedBody, user, asExpressResponse(response));
+
+            expect(generateHistoryUseCase.execute).toHaveBeenCalledWith({
+                userId: 'user123',
+                theme: 'Adventure',
+                type: HistoryType.QUERY,
+            });
+        });
+    });
+
+    describe('generateSubHistory', () => {
+        it('should generate a subscription history for the user in the request body', async () => {
+            const response = createResponse();
+            const body = { userId: 'subscription-user', theme: 'Adventure' };
+
+            generateHistoryUseCase.execute.mockResolvedValue(ResultEntity.success('Generated'));
+
+            await controller.generateSubHistory(body, asExpressResponse(response));
+
+            expect(generateHistoryUseCase.execute.mock.calls).toEqual([
+                [
+                    {
+                        type: HistoryType.SUBSCRIPTION,
+                        ...body,
+                    },
+                ],
+            ]);
+            expect(response.status.mock.calls).toEqual([[201]]);
+            expect(response.json.mock.calls).toEqual([[{ history: 'Generated' }]]);
         });
     });
 
@@ -115,9 +163,12 @@ describe('HistoryController', () => {
                 character: 'Hero',
                 isActive: true,
                 generateAt,
+                type: HistoryType.SUBSCRIPTION,
             });
 
-            getHistoriesByFilterUseCase.execute.mockResolvedValue(ResultEntity.success([history]));
+            getHistoriesByFilterUseCase.execute.mockResolvedValue(
+                ResultEntity.success({ histories: [history], total: 21 }),
+            );
 
             await controller.getHistoriesByFilter(
                 { theme: 'Adventure' },
@@ -130,6 +181,8 @@ describe('HistoryController', () => {
                     {
                         userId: 'user123',
                         theme: 'Adventure',
+                        page: 1,
+                        pageSize: 20,
                     },
                 ],
             ]);
@@ -141,12 +194,19 @@ describe('HistoryController', () => {
                             {
                                 id: 'history123',
                                 content: 'Content',
+                                type: HistoryType.SUBSCRIPTION,
                                 date: '2024-01-01',
                                 theme: 'Adventure',
                                 character: 'Hero',
                                 generateAt,
                             },
                         ],
+                        meta: {
+                            page: 1,
+                            pageSize: 20,
+                            total: 21,
+                            totalPages: 2,
+                        },
                     },
                 ],
             ]);
@@ -162,6 +222,32 @@ describe('HistoryController', () => {
 
             expect(response.status.mock.calls).toEqual([[500]]);
             expect(response.json.mock.calls).toEqual([[{ ...error }]]);
+        });
+
+        it('uses the authenticated identity when the controller is invoked directly', async () => {
+            const response = createResponse();
+            const untrustedFilter = {
+                userId: 'another-user',
+                theme: 'Adventure',
+            } as unknown as {
+                date?: string;
+                theme?: string;
+                character?: string;
+                type?: HistoryType;
+            };
+
+            getHistoriesByFilterUseCase.execute.mockResolvedValue(
+                ResultEntity.success({ histories: [], total: 0 }),
+            );
+
+            await controller.getHistoriesByFilter(untrustedFilter, user, asExpressResponse(response));
+
+            expect(getHistoriesByFilterUseCase.execute).toHaveBeenCalledWith({
+                theme: 'Adventure',
+                userId: 'user123',
+                page: 1,
+                pageSize: 20,
+            });
         });
     });
 
